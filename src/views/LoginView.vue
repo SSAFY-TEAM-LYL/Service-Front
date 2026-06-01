@@ -1,10 +1,11 @@
 <script setup>
 import { ref } from 'vue'
-import { RouterLink, useRouter } from 'vue-router'
+import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 
 const auth = useAuthStore()
 const router = useRouter()
+const route = useRoute()
 
 const email = ref('')
 const password = ref('')
@@ -20,7 +21,7 @@ const handleLogin = async () => {
   loading.value = true
   try {
     await auth.login(email.value, password.value)
-    router.push('/')
+    router.push(route.query.redirect || '/')
   } catch (e) {
     errorMsg.value = e.response?.data?.message || '로그인에 실패했습니다. 다시 시도해주세요.'
   } finally {

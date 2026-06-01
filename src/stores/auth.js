@@ -5,6 +5,8 @@ import api from '@/api'
 export const useAuthStore = defineStore('auth', () => {
   const user = ref(null)
   const accessToken = ref(localStorage.getItem('accessToken') || null)
+  const isRestoring = ref(false)
+  let restorePromise = null
 
   const isLoggedIn = computed(() => !!accessToken.value)
 
@@ -32,6 +34,33 @@ export const useAuthStore = defineStore('auth', () => {
     return data
   }
 
+  async function restoreUser() {
+    if (user.value) return user.value
+    if (!accessToken.value) {
+      clearAuth()
+      return null
+    }
+    if (restorePromise) return restorePromise
+
+    isRestoring.value = true
+    restorePromise = api
+      .get('/auth/me', { skipAuthRedirect: true })
+      .then(({ data }) => {
+        user.value = data
+        return data
+      })
+      .catch((error) => {
+        clearAuth()
+        throw error
+      })
+      .finally(() => {
+        isRestoring.value = false
+        restorePromise = null
+      })
+
+    return restorePromise
+  }
+
   function logout() {
     clearAuth()
   }
@@ -40,8 +69,10 @@ export const useAuthStore = defineStore('auth', () => {
     user,
     accessToken,
     isLoggedIn,
+    isRestoring,
     login,
     signup,
+    restoreUser,
     logout,
     setAuth,
     clearAuth,
