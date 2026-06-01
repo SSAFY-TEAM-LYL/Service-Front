@@ -1,6 +1,7 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { createBoardPost } from '@/api/board'
 
 const router = useRouter()
 
@@ -21,10 +22,11 @@ const handleSubmit = async () => {
   if (!validate()) return
   loading.value = true
   try {
-    // TODO: API 연동 후 교체
-    // await api.post('/boards', { title: title.value, content: content.value })
-    alert('글이 작성되었습니다. (API 연동 전 임시 알림)')
-    router.push('/board')
+    const post = await createBoardPost({
+      title: title.value.trim(),
+      content: content.value.trim(),
+    })
+    router.push(`/board/${post.id}`)
   } catch (e) {
     errors.value.general = e.response?.data?.message || '글 작성에 실패했습니다.'
   } finally {

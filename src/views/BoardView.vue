@@ -1,14 +1,21 @@
 <script setup>
-import { ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
+import { fetchBoardPosts } from '@/api/board'
 
-const posts = ref([
-  { id: 5, title: '그리디 vs DP, 어떻게 구분하나요?', author: '궁금이', date: '2026-05-18', comments: 12, views: 203 },
-  { id: 4, title: '백준 골드 달성 후기 및 공부 방법 공유', author: '성장일기', date: '2026-05-18', comments: 8, views: 156 },
-  { id: 3, title: '다익스트라 알고리즘 정리 노트', author: '알고장인', date: '2026-05-17', comments: 5, views: 89 },
-  { id: 2, title: 'BFS/DFS 문제 추천 부탁드립니다', author: '코린이', date: '2026-05-17', comments: 3, views: 67 },
-  { id: 1, title: '이분 탐색 응용 문제에서 막혔습니다', author: '초보개발', date: '2026-05-16', comments: 7, views: 112 },
-])
+const posts = ref([])
+const loading = ref(true)
+const errorMessage = ref('')
+
+onMounted(async () => {
+  try {
+    posts.value = await fetchBoardPosts()
+  } catch (error) {
+    errorMessage.value = error.response?.data?.message || '게시글을 불러오지 못했습니다.'
+  } finally {
+    loading.value = false
+  }
+})
 </script>
 
 <template>
@@ -23,7 +30,15 @@ const posts = ref([
       </RouterLink>
     </div>
 
-    <div class="board-table">
+    <div v-if="loading" class="board-state">
+      <p>불러오는 중...</p>
+    </div>
+
+    <div v-else-if="errorMessage" class="board-state">
+      <p>{{ errorMessage }}</p>
+    </div>
+
+    <div v-else class="board-table">
       <div class="table-header">
         <span class="col-id">#</span>
         <span class="col-title">제목</span>
@@ -49,7 +64,7 @@ const posts = ref([
       </RouterLink>
     </div>
 
-    <div class="board-empty" v-if="posts.length === 0">
+    <div class="board-empty" v-if="!loading && !errorMessage && posts.length === 0">
       <p>아직 작성된 글이 없습니다.</p>
       <RouterLink to="/board/write" class="btn btn-outline">첫 글을 작성해보세요</RouterLink>
     </div>
@@ -164,6 +179,14 @@ const posts = ref([
   text-align: center;
   padding: var(--space-16) 0;
   color: var(--color-text-muted);
+}
+
+.board-state {
+  text-align: center;
+  padding: var(--space-16) 0;
+  color: var(--color-text-muted);
+  border-top: 2px solid var(--color-text);
+  border-bottom: 1px solid var(--color-border-light);
 }
 
 .board-empty p {
