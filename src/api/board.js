@@ -1,16 +1,16 @@
-import api from '@/api'
+import api, { unwrapApiResponse } from '@/api'
 
 export const fetchBoardPosts = async () => {
-  const { data } = await api.get('/boards')
-  return data
+  const response = await api.get('/boards')
+  return unwrapApiResponse(response)
 }
 
 export const fetchBoardPost = async (id) => {
-  const { data } = await api.get(`/boards/${id}`)
-  return data
+  const response = await api.get(`/boards/${id}`)
+  return unwrapApiResponse(response)
 }
 
 export const createBoardPost = async (payload) => {
-  const { data } = await api.post('/boards', payload)
-  return data
+  const response = await api.post('/boards', payload)
+  return unwrapApiResponse(response)
 }

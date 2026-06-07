@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import api from '@/api'
+import api, { unwrapApiResponse } from '@/api'
 
 export const useAuthStore = defineStore('auth', () => {
   const user = ref(null)
@@ -23,13 +23,13 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   async function login(email, password) {
-    const { data } = await api.post('/auth/login', { email, password })
+    const data = unwrapApiResponse(await api.post('/auth/login', { email, password }))
     setAuth(data.token, data.user)
     return data
   }
 
   async function signup(payload) {
-    const { data } = await api.post('/auth/signup', payload)
+    const data = unwrapApiResponse(await api.post('/auth/signup', payload))
     setAuth(data.token, data.user)
     return data
   }
@@ -45,7 +45,8 @@ export const useAuthStore = defineStore('auth', () => {
     isRestoring.value = true
     restorePromise = api
       .get('/auth/me', { skipAuthRedirect: true })
-      .then(({ data }) => {
+      .then((response) => {
+        const data = unwrapApiResponse(response)
         user.value = data
         return data
       })

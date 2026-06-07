@@ -8,6 +8,14 @@ const api = axios.create({
   },
 })
 
+export const unwrapApiResponse = (response) => {
+  const body = response.data
+  if (body && Object.prototype.hasOwnProperty.call(body, 'data')) {
+    return body.data
+  }
+  return body
+}
+
 // Request interceptor — attach JWT token
 api.interceptors.request.use(
   (config) => {
