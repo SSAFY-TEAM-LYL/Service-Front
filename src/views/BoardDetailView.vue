@@ -1,25 +1,200 @@
 <script setup>
-import { ref, onMounted } from 'vue'
-import { useRoute, RouterLink } from 'vue-router'
-import { fetchBoardPost } from '@/api/board'
+import { computed, onMounted, ref } from 'vue'
+import { RouterLink, useRoute, useRouter } from 'vue-router'
+import {
+  createBoardComment,
+  deleteBoardComment,
+  deleteBoardPost,
+  fetchBoardComments,
+  fetchBoardPost,
+  updateBoardComment,
+  updateBoardPost,
+} from '@/api/board'
+import { useAuthStore } from '@/stores/auth'
 
 const route = useRoute()
+const router = useRouter()
+const auth = useAuthStore()
 
 const post = ref(null)
+const comments = ref([])
 const loading = ref(true)
+const commentsLoading = ref(false)
 const errorMessage = ref('')
+const actionError = ref('')
 
-onMounted(async () => {
-  const id = route.params.id
+const isEditingPost = ref(false)
+const editTitle = ref('')
+const editContent = ref('')
+const postSaving = ref(false)
+const postDeleting = ref(false)
+
+const commentContent = ref('')
+const commentSubmitting = ref(false)
+const commentError = ref('')
+const editingCommentId = ref(null)
+const editingCommentContent = ref('')
+const commentActionId = ref(null)
+
+const postId = computed(() => route.params.id)
+const isPostAuthor = computed(() => {
+  return post.value && auth.user && Number(post.value.authorId) === Number(auth.user.id)
+})
+
+const commentLoginTo = computed(() => ({
+  name: 'login',
+  query: { redirect: route.fullPath },
+}))
+
+const isCommentAuthor = (comment) => {
+  return auth.user && Number(comment.authorId) === Number(auth.user.id)
+}
+
+const loadComments = async () => {
+  commentsLoading.value = true
   try {
-    post.value = await fetchBoardPost(id)
+    comments.value = await fetchBoardComments(postId.value)
+  } catch (error) {
+    commentError.value = error.response?.data?.message || '댓글을 불러오지 못했습니다.'
+  } finally {
+    commentsLoading.value = false
+  }
+}
+
+const loadPost = async () => {
+  try {
+    post.value = await fetchBoardPost(postId.value)
+    await loadComments()
   } catch (error) {
     errorMessage.value = error.response?.data?.message || '게시글을 불러오지 못했습니다.'
     post.value = null
   } finally {
     loading.value = false
   }
-})
+}
+
+onMounted(loadPost)
+
+const startPostEdit = () => {
+  actionError.value = ''
+  editTitle.value = post.value.title
+  editContent.value = post.value.content
+  isEditingPost.value = true
+}
+
+const cancelPostEdit = () => {
+  isEditingPost.value = false
+  actionError.value = ''
+}
+
+const submitPostEdit = async () => {
+  const title = editTitle.value.trim()
+  const content = editContent.value.trim()
+  if (!title || !content) {
+    actionError.value = '제목과 내용을 모두 입력해주세요.'
+    return
+  }
+
+  postSaving.value = true
+  actionError.value = ''
+  try {
+    post.value = await updateBoardPost(post.value.id, { title, content })
+    isEditingPost.value = false
+  } catch (error) {
+    actionError.value = error.response?.data?.message || '게시글 수정에 실패했습니다.'
+  } finally {
+    postSaving.value = false
+  }
+}
+
+const removePost = async () => {
+  if (!confirm('게시글을 삭제하시겠습니까?')) return
+
+  postDeleting.value = true
+  actionError.value = ''
+  try {
+    await deleteBoardPost(post.value.id)
+    router.push('/board')
+  } catch (error) {
+    actionError.value = error.response?.data?.message || '게시글 삭제에 실패했습니다.'
+  } finally {
+    postDeleting.value = false
+  }
+}
+
+const submitComment = async () => {
+  const content = commentContent.value.trim()
+  if (!content) {
+    commentError.value = '댓글 내용을 입력해주세요.'
+    return
+  }
+
+  commentSubmitting.value = true
+  commentError.value = ''
+  try {
+    const created = await createBoardComment(post.value.id, { content })
+    comments.value = [...comments.value, created]
+    post.value = {
+      ...post.value,
+      comments: (post.value.comments || 0) + 1,
+    }
+    commentContent.value = ''
+  } catch (error) {
+    commentError.value = error.response?.data?.message || '댓글 작성에 실패했습니다.'
+  } finally {
+    commentSubmitting.value = false
+  }
+}
+
+const startCommentEdit = (comment) => {
+  commentError.value = ''
+  editingCommentId.value = comment.id
+  editingCommentContent.value = comment.content
+}
+
+const cancelCommentEdit = () => {
+  editingCommentId.value = null
+  editingCommentContent.value = ''
+}
+
+const submitCommentEdit = async (comment) => {
+  const content = editingCommentContent.value.trim()
+  if (!content) {
+    commentError.value = '댓글 내용을 입력해주세요.'
+    return
+  }
+
+  commentActionId.value = comment.id
+  commentError.value = ''
+  try {
+    const updated = await updateBoardComment(comment.id, { content })
+    comments.value = comments.value.map((item) => (item.id === updated.id ? updated : item))
+    cancelCommentEdit()
+  } catch (error) {
+    commentError.value = error.response?.data?.message || '댓글 수정에 실패했습니다.'
+  } finally {
+    commentActionId.value = null
+  }
+}
+
+const removeComment = async (comment) => {
+  if (!confirm('댓글을 삭제하시겠습니까?')) return
+
+  commentActionId.value = comment.id
+  commentError.value = ''
+  try {
+    await deleteBoardComment(comment.id)
+    comments.value = comments.value.filter((item) => item.id !== comment.id)
+    post.value = {
+      ...post.value,
+      comments: Math.max((post.value.comments || 1) - 1, 0),
+    }
+  } catch (error) {
+    commentError.value = error.response?.data?.message || '댓글 삭제에 실패했습니다.'
+  } finally {
+    commentActionId.value = null
+  }
+}
 </script>
 
 <template>
@@ -31,29 +206,153 @@ onMounted(async () => {
     <div v-else-if="!post" class="detail-empty fade-in">
       <h2>게시글을 찾을 수 없습니다</h2>
       <p>{{ errorMessage || '삭제되었거나 존재하지 않는 게시글입니다.' }}</p>
-      <RouterLink to="/board" class="btn btn-outline" style="margin-top: var(--space-4);">목록으로</RouterLink>
+      <RouterLink to="/board" class="btn btn-outline detail-empty-action">목록으로</RouterLink>
     </div>
 
     <article v-else class="detail-article fade-in">
-      <RouterLink to="/board" class="back-link">← 목록으로</RouterLink>
+      <RouterLink to="/board" class="back-link">목록으로</RouterLink>
 
       <header class="detail-header">
-        <h1 class="detail-title">{{ post.title }}</h1>
-        <div class="detail-meta">
-          <span class="meta-author">{{ post.author }}</span>
-          <span class="meta-sep">·</span>
-          <span class="meta-date">{{ post.date }}</span>
-          <span class="meta-sep">·</span>
-          <span class="meta-views">조회 {{ post.views }}</span>
+        <div class="detail-heading">
+          <div class="detail-title-group">
+            <h1 v-if="!isEditingPost" class="detail-title">{{ post.title }}</h1>
+            <input
+              v-else
+              v-model="editTitle"
+              class="edit-title-input"
+              type="text"
+              aria-label="게시글 제목"
+            />
+
+            <div class="detail-meta">
+              <span class="meta-author">{{ post.author }}</span>
+              <span class="meta-sep">·</span>
+              <span class="meta-date">{{ post.date }}</span>
+              <span class="meta-sep">·</span>
+              <span class="meta-views">조회 {{ post.views }}</span>
+              <span class="meta-sep">·</span>
+              <span class="meta-comments">댓글 {{ post.comments }}</span>
+            </div>
+          </div>
+
+          <div v-if="isPostAuthor" class="post-actions">
+            <template v-if="isEditingPost">
+              <button class="btn btn-outline btn-sm" type="button" @click="cancelPostEdit">취소</button>
+              <button
+                class="btn btn-primary btn-sm"
+                type="button"
+                :disabled="postSaving"
+                @click="submitPostEdit"
+              >
+                {{ postSaving ? '저장 중...' : '저장' }}
+              </button>
+            </template>
+            <template v-else>
+              <button class="btn btn-outline btn-sm" type="button" @click="startPostEdit">수정</button>
+              <button
+                class="btn btn-danger btn-sm"
+                type="button"
+                :disabled="postDeleting"
+                @click="removePost"
+              >
+                {{ postDeleting ? '삭제 중...' : '삭제' }}
+              </button>
+            </template>
+          </div>
         </div>
+
+        <p v-if="actionError" class="error-text action-error">{{ actionError }}</p>
       </header>
 
-      <div class="detail-body">
+      <div v-if="!isEditingPost" class="detail-body">
         <p v-for="(line, i) in post.content.split('\n')" :key="i">
           <template v-if="line.trim()">{{ line }}</template>
           <br v-else />
         </p>
       </div>
+
+      <div v-else class="detail-edit-body">
+        <textarea v-model="editContent" rows="14" aria-label="게시글 내용"></textarea>
+      </div>
+
+      <section class="comments-section">
+        <div class="comments-header">
+          <h2>댓글</h2>
+          <span>{{ comments.length }}</span>
+        </div>
+
+        <form v-if="auth.isLoggedIn" class="comment-form" @submit.prevent="submitComment">
+          <textarea
+            v-model="commentContent"
+            rows="4"
+            placeholder="댓글을 입력하세요"
+            aria-label="댓글 내용"
+          ></textarea>
+          <div class="comment-form-actions">
+            <p v-if="commentError && !editingCommentId" class="error-text">{{ commentError }}</p>
+            <button class="btn btn-primary btn-sm" type="submit" :disabled="commentSubmitting">
+              {{ commentSubmitting ? '등록 중...' : '댓글 등록' }}
+            </button>
+          </div>
+        </form>
+
+        <div v-else class="comment-login">
+          <RouterLink :to="commentLoginTo" class="btn btn-outline btn-sm">로그인하고 댓글 작성</RouterLink>
+        </div>
+
+        <div v-if="commentsLoading" class="comments-state">
+          <p>댓글을 불러오는 중...</p>
+        </div>
+
+        <div v-else-if="comments.length === 0" class="comments-state">
+          <p>아직 댓글이 없습니다.</p>
+        </div>
+
+        <ul v-else class="comment-list">
+          <li v-for="comment in comments" :key="comment.id" class="comment-item">
+            <div class="comment-meta">
+              <strong>{{ comment.author }}</strong>
+              <span>{{ comment.date }}</span>
+            </div>
+
+            <template v-if="editingCommentId === comment.id">
+              <textarea
+                v-model="editingCommentContent"
+                class="comment-edit-input"
+                rows="3"
+                aria-label="댓글 수정 내용"
+              ></textarea>
+              <p v-if="commentError" class="error-text comment-error">{{ commentError }}</p>
+              <div class="comment-actions">
+                <button class="btn btn-outline btn-sm" type="button" @click="cancelCommentEdit">취소</button>
+                <button
+                  class="btn btn-primary btn-sm"
+                  type="button"
+                  :disabled="commentActionId === comment.id"
+                  @click="submitCommentEdit(comment)"
+                >
+                  {{ commentActionId === comment.id ? '저장 중...' : '저장' }}
+                </button>
+              </div>
+            </template>
+
+            <template v-else>
+              <p class="comment-content">{{ comment.content }}</p>
+              <div v-if="isCommentAuthor(comment)" class="comment-actions">
+                <button class="text-button" type="button" @click="startCommentEdit(comment)">수정</button>
+                <button
+                  class="text-button text-danger"
+                  type="button"
+                  :disabled="commentActionId === comment.id"
+                  @click="removeComment(comment)"
+                >
+                  {{ commentActionId === comment.id ? '삭제 중...' : '삭제' }}
+                </button>
+              </div>
+            </template>
+          </li>
+        </ul>
+      </section>
 
       <footer class="detail-footer">
         <RouterLink to="/board" class="btn btn-outline">목록</RouterLink>
@@ -64,7 +363,7 @@ onMounted(async () => {
 
 <style scoped>
 .detail-page {
-  max-width: 720px;
+  max-width: 760px;
   padding: var(--space-10) var(--space-6);
 }
 
@@ -78,6 +377,10 @@ onMounted(async () => {
 .detail-empty h2 {
   margin-bottom: var(--space-2);
   color: var(--color-text);
+}
+
+.detail-empty-action {
+  margin-top: var(--space-4);
 }
 
 .back-link {
@@ -98,16 +401,65 @@ onMounted(async () => {
   margin-bottom: var(--space-8);
 }
 
+.detail-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.detail-title-group {
+  flex: 1;
+  min-width: 0;
+}
+
 .detail-title {
   font-size: var(--font-2xl);
   font-weight: 800;
   line-height: 1.3;
   margin-bottom: var(--space-3);
+  overflow-wrap: anywhere;
+}
+
+.edit-title-input,
+.detail-edit-body textarea,
+.comment-form textarea,
+.comment-edit-input {
+  width: 100%;
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-text);
+  outline: none;
+  transition: all var(--transition-fast);
+}
+
+.edit-title-input {
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--font-xl);
+  font-weight: 700;
+  margin-bottom: var(--space-3);
+}
+
+.detail-edit-body textarea,
+.comment-form textarea,
+.comment-edit-input {
+  padding: var(--space-3) var(--space-4);
+  resize: vertical;
+  line-height: 1.7;
+}
+
+.edit-title-input:focus,
+.detail-edit-body textarea:focus,
+.comment-form textarea:focus,
+.comment-edit-input:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(32, 201, 151, 0.12);
 }
 
 .detail-meta {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: var(--space-2);
   font-size: var(--font-sm);
   color: var(--color-text-muted);
@@ -122,6 +474,17 @@ onMounted(async () => {
   color: var(--color-border);
 }
 
+.post-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+}
+
+.action-error {
+  margin-top: var(--space-3);
+}
+
 .detail-body {
   line-height: 1.9;
   font-size: var(--font-base);
@@ -131,13 +494,146 @@ onMounted(async () => {
 
 .detail-body p {
   margin-bottom: var(--space-1);
+  overflow-wrap: anywhere;
+}
+
+.comments-section {
+  margin-top: var(--space-12);
+  padding-top: var(--space-6);
+  border-top: 1px solid var(--color-border-light);
+}
+
+.comments-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-5);
+}
+
+.comments-header h2 {
+  font-size: var(--font-lg);
+  font-weight: 800;
+}
+
+.comments-header span {
+  color: var(--color-primary-dark);
+  font-weight: 700;
+  font-size: var(--font-sm);
+}
+
+.comment-form {
+  margin-bottom: var(--space-6);
+}
+
+.comment-form-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+}
+
+.comment-login,
+.comments-state {
+  padding: var(--space-5) 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-sm);
+}
+
+.comment-list {
+  list-style: none;
+  border-top: 1px solid var(--color-border-light);
+}
+
+.comment-item {
+  padding: var(--space-5) 0;
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+.comment-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+
+.comment-meta strong {
+  font-size: var(--font-sm);
+}
+
+.comment-meta span {
+  font-size: var(--font-xs);
+  color: var(--color-text-muted);
+}
+
+.comment-content {
+  color: var(--color-text);
+  line-height: 1.7;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.comment-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+}
+
+.comment-error {
+  margin-top: var(--space-2);
+}
+
+.text-button {
+  color: var(--color-text-secondary);
+  font-size: var(--font-xs);
+  font-weight: 600;
+}
+
+.text-button:hover {
+  color: var(--color-primary);
+}
+
+.text-danger {
+  color: var(--color-error);
+}
+
+.btn-danger {
+  background-color: var(--color-error-light);
+  color: var(--color-error);
+}
+
+.btn-danger:hover {
+  background-color: var(--color-error);
+  color: #fff;
+}
+
+.btn:disabled,
+.text-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+  transform: none;
 }
 
 .detail-footer {
-  margin-top: var(--space-12);
+  margin-top: var(--space-10);
   padding-top: var(--space-6);
   border-top: 1px solid var(--color-border-light);
   display: flex;
   justify-content: center;
+}
+
+@media (max-width: 640px) {
+  .detail-heading {
+    flex-direction: column;
+  }
+
+  .post-actions,
+  .comment-form-actions,
+  .comment-actions {
+    width: 100%;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+  }
 }
 </style>
