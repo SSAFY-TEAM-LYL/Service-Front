@@ -13,9 +13,14 @@ const categories = [
   { value: 'QUESTION', label: '질문' },
 ]
 
+const PAGE_SIZE = 10
+
 const posts = ref([])
 const loading = ref(true)
 const errorMessage = ref('')
+const currentPage = ref(1)
+const hasNextPage = ref(false)
+const pageCursors = ref([null])
 
 const selectedCategory = computed(() => {
   const category = route.query.category
@@ -31,6 +36,11 @@ const writeTo = computed(() => ({
   query: selectedCategory.value ? { category: selectedCategory.value } : {},
 }))
 
+const pageNumbers = computed(() => {
+  const pageCount = currentPage.value + (hasNextPage.value ? 1 : 0)
+  return Array.from({ length: pageCount }, (_, index) => index + 1)
+})
+
 const categoryLabel = (category) => {
   return categories.find((item) => item.value === category)?.label || category
 }
@@ -42,11 +52,30 @@ const changeCategory = (category) => {
   })
 }
 
-const loadPosts = async () => {
+const resetPagination = () => {
+  currentPage.value = 1
+  hasNextPage.value = false
+  pageCursors.value = [null]
+}
+
+const loadPosts = async (page = 1) => {
+  const cursor = page === 1 ? null : pageCursors.value[page - 1]
+  if (page > 1 && cursor === undefined) return
+
   loading.value = true
   errorMessage.value = ''
   try {
-    posts.value = await fetchBoardPosts(selectedCategory.value)
+    const response = await fetchBoardPosts({
+      category: selectedCategory.value,
+      cursor,
+      size: PAGE_SIZE,
+    })
+    posts.value = response.items
+    currentPage.value = page
+    hasNextPage.value = response.hasNext
+    if (response.hasNext) {
+      pageCursors.value[page] = response.nextCursor
+    }
   } catch (error) {
     errorMessage.value = error.response?.data?.message || '게시글을 불러오지 못했습니다.'
   } finally {
@@ -59,7 +88,8 @@ onMounted(loadPosts)
 watch(
   () => route.query.category,
   () => {
-    loadPosts()
+    resetPagination()
+    loadPosts(1)
   },
 )
 </script>
@@ -133,6 +163,35 @@ watch(
     <div class="board-empty" v-if="!loading && !errorMessage && posts.length === 0">
       <p>{{ selectedCategoryLabel }} 게시판에 아직 작성된 글이 없습니다.</p>
       <RouterLink :to="writeTo" class="btn btn-outline">첫 글을 작성해보세요</RouterLink>
+    </div>
+
+    <div v-if="!loading && !errorMessage && posts.length > 0" class="pagination">
+      <button
+        type="button"
+        class="page-button"
+        :disabled="currentPage === 1"
+        @click="loadPosts(currentPage - 1)"
+      >
+        이전
+      </button>
+      <button
+        v-for="page in pageNumbers"
+        :key="page"
+        type="button"
+        class="page-button"
+        :class="{ active: currentPage === page }"
+        @click="loadPosts(page)"
+      >
+        {{ page }}
+      </button>
+      <button
+        type="button"
+        class="page-button"
+        :disabled="!hasNextPage"
+        @click="loadPosts(currentPage + 1)"
+      >
+        다음
+      </button>
     </div>
   </div>
 </template>
@@ -333,6 +392,40 @@ watch(
 
 .board-empty p {
   margin-bottom: var(--space-4);
+}
+
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-8);
+  flex-wrap: wrap;
+}
+
+.page-button {
+  min-width: 42px;
+  height: 36px;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg);
+  color: var(--color-text-secondary);
+  font-size: var(--font-sm);
+  font-weight: 700;
+  transition: all var(--transition-fast);
+}
+
+.page-button:hover:not(:disabled),
+.page-button.active {
+  border-color: var(--color-primary);
+  background: var(--color-primary-light);
+  color: var(--color-primary-dark);
+}
+
+.page-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
 }
 
 @media (max-width: 640px) {

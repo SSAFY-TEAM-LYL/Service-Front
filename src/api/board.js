@@ -1,8 +1,12 @@
 import api, { unwrapApiResponse } from '@/api'
 
-export const fetchBoardPosts = async (category) => {
+export const fetchBoardPosts = async ({ category, cursor, size } = {}) => {
   const response = await api.get('/boards', {
-    params: category ? { category } : undefined,
+    params: {
+      ...(category ? { category } : {}),
+      ...(cursor ? { cursor } : {}),
+      ...(size ? { size } : {}),
+    },
   })
   return unwrapApiResponse(response)
 }
@@ -27,8 +31,13 @@ export const deleteBoardPost = async (id) => {
   return unwrapApiResponse(response)
 }
 
-export const fetchBoardComments = async (postId) => {
-  const response = await api.get(`/boards/${postId}/comments`)
+export const fetchBoardComments = async (postId, { cursor, size } = {}) => {
+  const response = await api.get(`/boards/${postId}/comments`, {
+    params: {
+      ...(cursor ? { cursor } : {}),
+      ...(size ? { size } : {}),
+    },
+  })
   return unwrapApiResponse(response)
 }
 

@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import {
   createBoardComment,
@@ -15,13 +15,19 @@ import { useAuthStore } from '@/stores/auth'
 const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
+const COMMENT_PAGE_SIZE = 10
 
 const post = ref(null)
 const comments = ref([])
 const loading = ref(true)
 const commentsLoading = ref(false)
+const commentsLoadingMore = ref(false)
+const commentCursor = ref(null)
+const hasMoreComments = ref(false)
+const commentSentinel = ref(null)
 const errorMessage = ref('')
 const actionError = ref('')
+let commentObserver = null
 
 const isEditingPost = ref(false)
 const editTitle = ref('')
@@ -54,6 +60,14 @@ const isCommentAuthor = (comment) => {
   return auth.user && Number(comment.authorId) === Number(auth.user.id)
 }
 
+const appendUniqueComments = (newComments) => {
+  const existingIds = new Set(comments.value.map((comment) => comment.id))
+  comments.value = [
+    ...comments.value,
+    ...newComments.filter((comment) => !existingIds.has(comment.id)),
+  ]
+}
+
 const categoryLabel = (category) => {
   const labels = {
     NOTICE: '공지',
@@ -63,21 +77,59 @@ const categoryLabel = (category) => {
   return labels[category] || category
 }
 
-const loadComments = async () => {
-  commentsLoading.value = true
+const observeCommentSentinel = async () => {
+  await nextTick()
+  if (commentObserver) {
+    commentObserver.disconnect()
+  }
+  if (!commentSentinel.value || !hasMoreComments.value) return
+
+  commentObserver = new IntersectionObserver((entries) => {
+    if (entries.some((entry) => entry.isIntersecting)) {
+      loadComments()
+    }
+  }, { rootMargin: '160px' })
+  commentObserver.observe(commentSentinel.value)
+}
+
+const loadComments = async ({ reset = false } = {}) => {
+  if (commentsLoading.value || commentsLoadingMore.value) return
+
+  if (reset) {
+    comments.value = []
+    commentCursor.value = null
+    hasMoreComments.value = false
+    commentsLoading.value = true
+  } else {
+    if (!hasMoreComments.value) return
+    commentsLoadingMore.value = true
+  }
+
   try {
-    comments.value = await fetchBoardComments(postId.value)
+    const response = await fetchBoardComments(postId.value, {
+      cursor: reset ? null : commentCursor.value,
+      size: COMMENT_PAGE_SIZE,
+    })
+    if (reset) {
+      comments.value = response.items
+    } else {
+      appendUniqueComments(response.items)
+    }
+    commentCursor.value = response.nextCursor
+    hasMoreComments.value = response.hasNext
+    await observeCommentSentinel()
   } catch (error) {
     commentError.value = error.response?.data?.message || '댓글을 불러오지 못했습니다.'
   } finally {
     commentsLoading.value = false
+    commentsLoadingMore.value = false
   }
 }
 
 const loadPost = async () => {
   try {
     post.value = await fetchBoardPost(postId.value)
-    await loadComments()
+    await loadComments({ reset: true })
   } catch (error) {
     errorMessage.value = error.response?.data?.message || '게시글을 불러오지 못했습니다.'
     post.value = null
@@ -87,6 +139,12 @@ const loadPost = async () => {
 }
 
 onMounted(loadPost)
+
+onBeforeUnmount(() => {
+  if (commentObserver) {
+    commentObserver.disconnect()
+  }
+})
 
 const startPostEdit = () => {
   actionError.value = ''
@@ -372,6 +430,14 @@ const removeComment = async (comment) => {
             </template>
           </li>
         </ul>
+
+        <div
+          v-if="hasMoreComments || commentsLoadingMore"
+          ref="commentSentinel"
+          class="comments-more-state"
+        >
+          <p>{{ commentsLoadingMore ? '댓글을 더 불러오는 중...' : ' ' }}</p>
+        </div>
       </section>
 
       <footer class="detail-footer">
@@ -584,10 +650,16 @@ const removeComment = async (comment) => {
 }
 
 .comment-login,
-.comments-state {
+.comments-state,
+.comments-more-state {
   padding: var(--space-5) 0;
   color: var(--color-text-muted);
   font-size: var(--font-sm);
+}
+
+.comments-more-state {
+  min-height: 48px;
+  text-align: center;
 }
 
 .comment-list {
