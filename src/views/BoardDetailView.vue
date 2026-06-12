@@ -37,6 +37,10 @@ const editingCommentContent = ref('')
 const commentActionId = ref(null)
 
 const postId = computed(() => route.params.id)
+const listTo = computed(() => ({
+  name: 'board',
+  query: post.value?.category ? { category: post.value.category } : {},
+}))
 const isPostAuthor = computed(() => {
   return post.value && auth.user && Number(post.value.authorId) === Number(auth.user.id)
 })
@@ -48,6 +52,15 @@ const commentLoginTo = computed(() => ({
 
 const isCommentAuthor = (comment) => {
   return auth.user && Number(comment.authorId) === Number(auth.user.id)
+}
+
+const categoryLabel = (category) => {
+  const labels = {
+    NOTICE: '공지',
+    FREE: '자유',
+    QUESTION: '질문',
+  }
+  return labels[category] || category
 }
 
 const loadComments = async () => {
@@ -98,7 +111,11 @@ const submitPostEdit = async () => {
   postSaving.value = true
   actionError.value = ''
   try {
-    post.value = await updateBoardPost(post.value.id, { title, content })
+    post.value = await updateBoardPost(post.value.id, {
+      category: post.value.category,
+      title,
+      content,
+    })
     isEditingPost.value = false
   } catch (error) {
     actionError.value = error.response?.data?.message || '게시글 수정에 실패했습니다.'
@@ -210,11 +227,14 @@ const removeComment = async (comment) => {
     </div>
 
     <article v-else class="detail-article fade-in">
-      <RouterLink to="/board" class="back-link">목록으로</RouterLink>
+      <RouterLink :to="listTo" class="back-link">목록으로</RouterLink>
 
       <header class="detail-header">
         <div class="detail-heading">
           <div class="detail-title-group">
+            <span class="category-badge" :class="post.category?.toLowerCase()">
+              {{ post.categoryLabel || categoryLabel(post.category) }}
+            </span>
             <h1 v-if="!isEditingPost" class="detail-title">{{ post.title }}</h1>
             <input
               v-else
@@ -355,7 +375,7 @@ const removeComment = async (comment) => {
       </section>
 
       <footer class="detail-footer">
-        <RouterLink to="/board" class="btn btn-outline">목록</RouterLink>
+        <RouterLink :to="listTo" class="btn btn-outline">목록</RouterLink>
       </footer>
     </article>
   </div>
@@ -419,6 +439,36 @@ const removeComment = async (comment) => {
   line-height: 1.3;
   margin-bottom: var(--space-3);
   overflow-wrap: anywhere;
+}
+
+.category-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  height: 24px;
+  margin-bottom: var(--space-3);
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-secondary);
+  color: var(--color-text-secondary);
+  font-size: var(--font-xs);
+  font-weight: 800;
+}
+
+.category-badge.notice {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.category-badge.free {
+  background: var(--color-primary-light);
+  color: var(--color-primary-dark);
+}
+
+.category-badge.question {
+  background: #e0f2fe;
+  color: #0369a1;
 }
 
 .edit-title-input,

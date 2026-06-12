@@ -1,7 +1,9 @@
 import api, { unwrapApiResponse } from '@/api'
 
-export const fetchBoardPosts = async () => {
-  const response = await api.get('/boards')
+export const fetchBoardPosts = async (category) => {
+  const response = await api.get('/boards', {
+    params: category ? { category } : undefined,
+  })
   return unwrapApiResponse(response)
 }
 

@@ -1,17 +1,45 @@
 <script setup>
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { computed, ref, watchEffect } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { createBoardPost } from '@/api/board'
+import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
+const route = useRoute()
+const auth = useAuthStore()
 
+const allCategories = [
+  { value: 'NOTICE', label: '공지' },
+  { value: 'FREE', label: '자유' },
+  { value: 'QUESTION', label: '질문' },
+]
+
+const isAdmin = computed(() => auth.user?.role === 'ADMIN')
+const selectableCategories = computed(() => {
+  return isAdmin.value ? allCategories : allCategories.filter((item) => item.value !== 'NOTICE')
+})
+
+const initialCategory = allCategories.some((item) => item.value === route.query.category)
+  ? route.query.category
+  : 'FREE'
+
+const category = ref(initialCategory)
 const title = ref('')
 const content = ref('')
 const errors = ref({})
 const loading = ref(false)
 
+watchEffect(() => {
+  if (!selectableCategories.value.some((item) => item.value === category.value)) {
+    category.value = 'FREE'
+  }
+})
+
 const validate = () => {
   const e = {}
+  if (!selectableCategories.value.some((item) => item.value === category.value)) {
+    e.category = '선택할 수 없는 게시판입니다.'
+  }
   if (!title.value.trim()) e.title = '제목을 입력해주세요.'
   if (!content.value.trim()) e.content = '내용을 입력해주세요.'
   errors.value = e
@@ -23,6 +51,7 @@ const handleSubmit = async () => {
   loading.value = true
   try {
     const post = await createBoardPost({
+      category: category.value,
       title: title.value.trim(),
       content: content.value.trim(),
     })
@@ -49,6 +78,23 @@ const handleCancel = () => {
     </div>
 
     <form @submit.prevent="handleSubmit" class="write-form">
+      <div class="input-group">
+        <label>게시판</label>
+        <div class="category-options">
+          <button
+            v-for="item in selectableCategories"
+            :key="item.value"
+            type="button"
+            class="category-option"
+            :class="{ active: category === item.value, notice: item.value === 'NOTICE' }"
+            @click="category = item.value"
+          >
+            {{ item.label }}
+          </button>
+        </div>
+        <p v-if="errors.category" class="error-text">{{ errors.category }}</p>
+      </div>
+
       <div class="input-group">
         <label for="post-title">제목</label>
         <input
@@ -103,6 +149,37 @@ const handleCancel = () => {
 .write-form textarea {
   min-height: 320px;
   line-height: 1.8;
+}
+
+.category-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.category-option {
+  min-width: 78px;
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-secondary);
+  background: var(--color-bg);
+  font-size: var(--font-sm);
+  font-weight: 700;
+  transition: all var(--transition-fast);
+}
+
+.category-option:hover,
+.category-option.active {
+  border-color: var(--color-primary);
+  color: var(--color-primary-dark);
+  background: var(--color-primary-light);
+}
+
+.category-option.notice.active {
+  border-color: #f87171;
+  color: #b91c1c;
+  background: #fef2f2;
 }
 
 .write-actions {

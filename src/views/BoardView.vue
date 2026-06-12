@@ -1,21 +1,67 @@
 <script setup>
-import { onMounted, ref } from 'vue'
-import { RouterLink } from 'vue-router'
+import { computed, onMounted, ref, watch } from 'vue'
+import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { fetchBoardPosts } from '@/api/board'
+
+const route = useRoute()
+const router = useRouter()
+
+const categories = [
+  { value: '', label: '전체' },
+  { value: 'NOTICE', label: '공지' },
+  { value: 'FREE', label: '자유' },
+  { value: 'QUESTION', label: '질문' },
+]
 
 const posts = ref([])
 const loading = ref(true)
 const errorMessage = ref('')
 
-onMounted(async () => {
+const selectedCategory = computed(() => {
+  const category = route.query.category
+  return categories.some((item) => item.value === category) ? category : ''
+})
+
+const selectedCategoryLabel = computed(() => {
+  return categories.find((item) => item.value === selectedCategory.value)?.label || '전체'
+})
+
+const writeTo = computed(() => ({
+  name: 'board-write',
+  query: selectedCategory.value ? { category: selectedCategory.value } : {},
+}))
+
+const categoryLabel = (category) => {
+  return categories.find((item) => item.value === category)?.label || category
+}
+
+const changeCategory = (category) => {
+  router.push({
+    name: 'board',
+    query: category ? { category } : {},
+  })
+}
+
+const loadPosts = async () => {
+  loading.value = true
+  errorMessage.value = ''
   try {
-    posts.value = await fetchBoardPosts()
+    posts.value = await fetchBoardPosts(selectedCategory.value)
   } catch (error) {
     errorMessage.value = error.response?.data?.message || '게시글을 불러오지 못했습니다.'
   } finally {
     loading.value = false
   }
-})
+}
+
+onMounted(loadPosts)
+
+watch(
+  () => route.query.category,
+  () => {
+    loadPosts()
+  },
+)
 </script>
 
 <template>
@@ -23,11 +69,24 @@ onMounted(async () => {
     <div class="board-top">
       <div>
         <h1 class="board-title">커뮤니티</h1>
-        <p class="board-desc">질문하고, 풀이를 공유하고, 함께 성장하세요.</p>
+        <p class="board-desc">공지, 자유 글, 질문을 한 곳에서 확인하세요.</p>
       </div>
-      <RouterLink to="/board/write" class="btn btn-primary">
-        ✏️ 글쓰기
+      <RouterLink :to="writeTo" class="btn btn-primary">
+        글쓰기
       </RouterLink>
+    </div>
+
+    <div class="category-tabs" aria-label="게시판 카테고리">
+      <button
+        v-for="category in categories"
+        :key="category.label"
+        type="button"
+        class="category-tab"
+        :class="{ active: selectedCategory === category.value, notice: category.value === 'NOTICE' }"
+        @click="changeCategory(category.value)"
+      >
+        {{ category.label }}
+      </button>
     </div>
 
     <div v-if="loading" class="board-state">
@@ -41,6 +100,7 @@ onMounted(async () => {
     <div v-else class="board-table">
       <div class="table-header">
         <span class="col-id">#</span>
+        <span class="col-category">분류</span>
         <span class="col-title">제목</span>
         <span class="col-author">작성자</span>
         <span class="col-date">작성일</span>
@@ -52,8 +112,14 @@ onMounted(async () => {
         :key="post.id"
         :to="`/board/${post.id}`"
         class="table-row"
+        :class="{ notice: post.category === 'NOTICE' }"
       >
         <span class="col-id">{{ post.id }}</span>
+        <span class="col-category">
+          <span class="category-badge" :class="post.category?.toLowerCase()">
+            {{ post.categoryLabel || categoryLabel(post.category) }}
+          </span>
+        </span>
         <span class="col-title">
           {{ post.title }}
           <span v-if="post.comments" class="comment-count">[{{ post.comments }}]</span>
@@ -65,8 +131,8 @@ onMounted(async () => {
     </div>
 
     <div class="board-empty" v-if="!loading && !errorMessage && posts.length === 0">
-      <p>아직 작성된 글이 없습니다.</p>
-      <RouterLink to="/board/write" class="btn btn-outline">첫 글을 작성해보세요</RouterLink>
+      <p>{{ selectedCategoryLabel }} 게시판에 아직 작성된 글이 없습니다.</p>
+      <RouterLink :to="writeTo" class="btn btn-outline">첫 글을 작성해보세요</RouterLink>
     </div>
   </div>
 </template>
@@ -82,6 +148,7 @@ onMounted(async () => {
   justify-content: space-between;
   align-items: flex-end;
   margin-bottom: var(--space-8);
+  gap: var(--space-4);
 }
 
 .board-title {
@@ -93,6 +160,38 @@ onMounted(async () => {
 .board-desc {
   color: var(--color-text-secondary);
   font-size: var(--font-sm);
+}
+
+.category-tabs {
+  display: flex;
+  gap: var(--space-2);
+  margin-bottom: var(--space-5);
+  overflow-x: auto;
+}
+
+.category-tab {
+  min-width: 72px;
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-secondary);
+  background: var(--color-bg);
+  font-size: var(--font-sm);
+  font-weight: 700;
+  transition: all var(--transition-fast);
+}
+
+.category-tab:hover,
+.category-tab.active {
+  border-color: var(--color-primary);
+  color: var(--color-primary-dark);
+  background: var(--color-primary-light);
+}
+
+.category-tab.notice.active {
+  border-color: #f87171;
+  color: #b91c1c;
+  background: #fef2f2;
 }
 
 /* ===== Table ===== */
@@ -126,6 +225,14 @@ onMounted(async () => {
   background-color: var(--color-primary-light);
 }
 
+.table-row.notice {
+  background-color: #fff7f7;
+}
+
+.table-row.notice:hover {
+  background-color: #fef2f2;
+}
+
 .col-id {
   width: 50px;
   text-align: center;
@@ -142,6 +249,41 @@ onMounted(async () => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.col-category {
+  width: 72px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.category-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  height: 24px;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-secondary);
+  color: var(--color-text-secondary);
+  font-size: var(--font-xs);
+  font-weight: 800;
+}
+
+.category-badge.notice {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.category-badge.free {
+  background: var(--color-primary-light);
+  color: var(--color-primary-dark);
+}
+
+.category-badge.question {
+  background: #e0f2fe;
+  color: #0369a1;
 }
 
 .comment-count {
@@ -194,8 +336,17 @@ onMounted(async () => {
 }
 
 @media (max-width: 640px) {
+  .board-top {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
   .col-author, .col-date, .col-views {
     display: none;
+  }
+
+  .col-category {
+    width: 58px;
   }
 }
 </style>
