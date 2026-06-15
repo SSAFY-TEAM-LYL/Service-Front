@@ -2,6 +2,7 @@
 import { onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { getApiErrorMessage, getOAuthErrorMessage } from '@/utils/authErrors'
 
 const route = useRoute()
 const router = useRouter()
@@ -16,7 +17,7 @@ onMounted(async () => {
   sessionStorage.removeItem('oauthRedirectAfterLogin')
 
   if (error) {
-    errorMsg.value = '소셜 로그인에 실패했습니다. 다시 시도해주세요.'
+    errorMsg.value = getOAuthErrorMessage(error)
     return
   }
 
@@ -29,7 +30,7 @@ onMounted(async () => {
     await auth.exchangeOAuthCode(code)
     router.replace(redirect)
   } catch (e) {
-    errorMsg.value = e.response?.data?.message || '소셜 로그인 처리에 실패했습니다.'
+    errorMsg.value = getApiErrorMessage(e, '소셜 로그인 처리에 실패했습니다.')
   }
 })
 

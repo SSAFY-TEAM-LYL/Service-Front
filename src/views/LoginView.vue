@@ -1,7 +1,8 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { getOAuthErrorMessage } from '@/utils/authErrors'
 
 const auth = useAuthStore()
 const router = useRouter()
@@ -13,6 +14,16 @@ const errorMsg = ref('')
 const loading = ref(false)
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api'
+
+watch(
+  () => route.query.error,
+  (error) => {
+    if (error) {
+      errorMsg.value = getOAuthErrorMessage(error)
+    }
+  },
+  { immediate: true },
+)
 
 const handleLogin = async () => {
   errorMsg.value = ''
