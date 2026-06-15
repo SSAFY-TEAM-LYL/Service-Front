@@ -34,6 +34,12 @@ export const useAuthStore = defineStore('auth', () => {
     return data
   }
 
+  async function exchangeOAuthCode(code) {
+    const data = unwrapApiResponse(await api.post('/auth/oauth/exchange', { code }))
+    setAuth(data.token, data.user)
+    return data
+  }
+
   async function restoreUser() {
     if (user.value) return user.value
     if (!accessToken.value) {
@@ -73,6 +79,7 @@ export const useAuthStore = defineStore('auth', () => {
     isRestoring,
     login,
     signup,
+    exchangeOAuthCode,
     restoreUser,
     logout,
     setAuth,
