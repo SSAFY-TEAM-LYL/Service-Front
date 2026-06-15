@@ -39,6 +39,23 @@ const router = createRouter({
       meta: { requiresAuth: true },
     },
     {
+      path: '/problems',
+      name: 'problems',
+      component: () => import('@/views/ProblemListView.vue'),
+    },
+    {
+      path: '/problems/:problemId',
+      name: 'problem-detail',
+      component: () => import('@/views/ProblemDetailView.vue'),
+      props: true,
+    },
+    {
+      path: '/admin/problem-publications',
+      name: 'admin-problem-publications',
+      component: () => import('@/views/AdminProblemPublicationsView.vue'),
+      meta: { requiresAuth: true, requiresAdmin: true },
+    },
+    {
       path: '/board',
       name: 'board',
       component: () => import('@/views/BoardView.vue'),
@@ -59,7 +76,7 @@ const router = createRouter({
 })
 
 router.beforeEach(async (to) => {
-  if (!to.meta.requiresAuth) return true
+  if (!to.meta.requiresAuth && !to.meta.requiresAdmin) return true
 
   const auth = useAuthStore()
   if (auth.isLoggedIn && !auth.user) {
@@ -72,6 +89,10 @@ router.beforeEach(async (to) => {
 
   if (!auth.isLoggedIn) {
     return { name: 'login', query: { redirect: to.fullPath } }
+  }
+
+  if (to.meta.requiresAdmin && auth.user?.role !== 'ADMIN') {
+    return { name: 'main' }
   }
 
   return true

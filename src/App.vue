@@ -15,6 +15,7 @@ watch(
 )
 
 const showNavProfileImage = computed(() => auth.user?.profileImageUrl && !navImageFailed.value)
+const isAdmin = computed(() => auth.user?.role === 'ADMIN')
 
 const handleLogout = () => {
   auth.logout()
@@ -31,9 +32,17 @@ const handleLogout = () => {
       </RouterLink>
 
       <nav class="nav">
+        <RouterLink to="/problems" class="nav-link">문제</RouterLink>
         <RouterLink to="/board" class="nav-link">커뮤니티</RouterLink>
 
         <template v-if="auth.isLoggedIn">
+          <RouterLink
+            v-if="isAdmin"
+            to="/admin/problem-publications"
+            class="nav-link"
+          >
+            문제 관리
+          </RouterLink>
           <RouterLink to="/mypage" class="nav-profile" aria-label="마이페이지로 이동">
             <img
               v-if="showNavProfileImage"
