@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import api, { unwrapApiResponse } from '@/api'
+import { fetchMyProfile, updateMyProfile, withdrawMe } from '@/api/members'
 
 export const useAuthStore = defineStore('auth', () => {
   const user = ref(null)
@@ -30,6 +31,12 @@ export const useAuthStore = defineStore('auth', () => {
 
   async function signup(payload) {
     const data = unwrapApiResponse(await api.post('/auth/signup', payload))
+    setAuth(data.token, data.user)
+    return data
+  }
+
+  async function restoreDeletedMember(email, password) {
+    const data = unwrapApiResponse(await api.post('/auth/restore', { email, password }))
     setAuth(data.token, data.user)
     return data
   }
@@ -72,6 +79,23 @@ export const useAuthStore = defineStore('auth', () => {
     clearAuth()
   }
 
+  async function refreshProfile() {
+    const data = await fetchMyProfile()
+    user.value = data
+    return data
+  }
+
+  async function updateProfile(payload) {
+    const data = await updateMyProfile(payload)
+    user.value = data
+    return data
+  }
+
+  async function withdraw(password) {
+    await withdrawMe(password)
+    clearAuth()
+  }
+
   return {
     user,
     accessToken,
@@ -79,8 +103,12 @@ export const useAuthStore = defineStore('auth', () => {
     isRestoring,
     login,
     signup,
+    restoreDeletedMember,
     exchangeOAuthCode,
     restoreUser,
+    refreshProfile,
+    updateProfile,
+    withdraw,
     logout,
     setAuth,
     clearAuth,

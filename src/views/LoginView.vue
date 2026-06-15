@@ -2,7 +2,7 @@
 import { ref, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-import { getOAuthErrorMessage } from '@/utils/authErrors'
+import { getApiErrorMessage, getOAuthErrorMessage } from '@/utils/authErrors'
 
 const auth = useAuthStore()
 const router = useRouter()
@@ -11,6 +11,7 @@ const route = useRoute()
 const email = ref('')
 const password = ref('')
 const errorMsg = ref('')
+const canRestoreDeletedMember = ref(false)
 const loading = ref(false)
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api'
@@ -20,6 +21,7 @@ watch(
   (error) => {
     if (error) {
       errorMsg.value = getOAuthErrorMessage(error)
+      canRestoreDeletedMember.value = String(error).toUpperCase() === 'DELETED_MEMBER'
     }
   },
   { immediate: true },
@@ -27,6 +29,7 @@ watch(
 
 const handleLogin = async () => {
   errorMsg.value = ''
+  canRestoreDeletedMember.value = false
   if (!email.value || !password.value) {
     errorMsg.value = '이메일과 비밀번호를 모두 입력해주세요.'
     return
@@ -36,7 +39,8 @@ const handleLogin = async () => {
     await auth.login(email.value, password.value)
     router.push(route.query.redirect || '/')
   } catch (e) {
-    errorMsg.value = e.response?.data?.message || '로그인에 실패했습니다. 다시 시도해주세요.'
+    canRestoreDeletedMember.value = e.response?.data?.code === 'DELETED_MEMBER'
+    errorMsg.value = getApiErrorMessage(e, '로그인에 실패했습니다. 다시 시도해주세요.')
   } finally {
     loading.value = false
   }
@@ -44,9 +48,15 @@ const handleLogin = async () => {
 
 const startOAuth = (provider) => {
   errorMsg.value = ''
+  canRestoreDeletedMember.value = false
   sessionStorage.setItem('oauthRedirectAfterLogin', route.query.redirect || '/')
   window.location.href = `${apiBaseUrl}/oauth2/authorization/${provider}`
 }
+
+const restoreRoute = () => ({
+  name: 'account-restore',
+  query: email.value.trim() ? { email: email.value.trim() } : {},
+})
 </script>
 
 <template>
@@ -82,7 +92,16 @@ const startOAuth = (provider) => {
           />
         </div>
 
-        <p v-if="errorMsg" class="error-text" style="margin-bottom: var(--space-4);">{{ errorMsg }}</p>
+        <div v-if="errorMsg" class="form-message">
+          <p class="error-text">{{ errorMsg }}</p>
+          <RouterLink
+            v-if="canRestoreDeletedMember"
+            :to="restoreRoute()"
+            class="btn btn-outline btn-block restore-button"
+          >
+            계정 복구하기
+          </RouterLink>
+        </div>
 
         <button type="submit" class="btn btn-primary btn-block" :disabled="loading">
           {{ loading ? '로그인 중...' : '로그인' }}
@@ -105,6 +124,9 @@ const startOAuth = (provider) => {
       <p class="auth-footer">
         아직 계정이 없으신가요?
         <RouterLink to="/signup" class="auth-link">회원가입</RouterLink>
+      </p>
+      <p class="restore-footer">
+        <RouterLink to="/account/restore" class="auth-link">탈퇴 계정 복구</RouterLink>
       </p>
     </div>
   </div>
@@ -147,6 +169,18 @@ const startOAuth = (provider) => {
 
 .auth-form {
   margin-bottom: var(--space-4);
+}
+
+.form-message {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.restore-button {
+  border-color: var(--color-primary);
+  color: var(--color-primary-dark);
 }
 
 .auth-divider {
@@ -194,6 +228,12 @@ const startOAuth = (provider) => {
   margin-top: var(--space-6);
   font-size: var(--font-sm);
   color: var(--color-text-secondary);
+}
+
+.restore-footer {
+  text-align: center;
+  margin-top: var(--space-3);
+  font-size: var(--font-sm);
 }
 
 .auth-link {

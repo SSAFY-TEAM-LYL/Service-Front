@@ -1,9 +1,20 @@
 <script setup>
+import { computed, ref, watch } from 'vue'
 import { RouterLink, RouterView, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 
 const auth = useAuthStore()
 const router = useRouter()
+const navImageFailed = ref(false)
+
+watch(
+  () => auth.user?.profileImageUrl,
+  () => {
+    navImageFailed.value = false
+  },
+)
+
+const showNavProfileImage = computed(() => auth.user?.profileImageUrl && !navImageFailed.value)
 
 const handleLogout = () => {
   auth.logout()
@@ -23,7 +34,19 @@ const handleLogout = () => {
         <RouterLink to="/board" class="nav-link">커뮤니티</RouterLink>
 
         <template v-if="auth.isLoggedIn">
-          <span class="nav-user">{{ auth.user?.nickname || '사용자' }}</span>
+          <RouterLink to="/mypage" class="nav-profile" aria-label="마이페이지로 이동">
+            <img
+              v-if="showNavProfileImage"
+              :src="auth.user.profileImageUrl"
+              :alt="`${auth.user?.nickname || '사용자'} 프로필`"
+              class="nav-avatar"
+              @error="navImageFailed = true"
+            />
+            <span v-else class="nav-avatar nav-avatar-fallback">
+              {{ (auth.user?.nickname || 'U').slice(0, 1).toUpperCase() }}
+            </span>
+            <span class="nav-user">{{ auth.user?.nickname || '사용자' }}</span>
+          </RouterLink>
           <button class="btn btn-ghost" @click="handleLogout">로그아웃</button>
         </template>
         <template v-else>
@@ -117,7 +140,44 @@ const handleLogout = () => {
   width: 100%;
 }
 
+.nav-profile {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  padding: 4px var(--space-2) 4px 4px;
+  border-radius: var(--radius-full);
+  transition: background-color var(--transition-fast);
+}
+
+.nav-profile:hover {
+  background-color: var(--color-primary-light);
+}
+
+.nav-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-full);
+  object-fit: cover;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.nav-avatar-fallback {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-primary-dark);
+  background: var(--color-primary-light);
+  font-size: var(--font-sm);
+  font-weight: 800;
+}
+
 .nav-user {
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-size: var(--font-sm);
   font-weight: 600;
   color: var(--color-text);

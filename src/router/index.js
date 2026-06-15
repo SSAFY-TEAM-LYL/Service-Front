@@ -23,9 +23,20 @@ const router = createRouter({
       component: () => import('@/views/SignupView.vue'),
     },
     {
+      path: '/account/restore',
+      name: 'account-restore',
+      component: () => import('@/views/AccountRestoreView.vue'),
+    },
+    {
       path: '/oauth/callback',
       name: 'oauth-callback',
       component: () => import('@/views/OAuthCallbackView.vue'),
+    },
+    {
+      path: '/mypage',
+      name: 'mypage',
+      component: () => import('@/views/MyPageView.vue'),
+      meta: { requiresAuth: true },
     },
     {
       path: '/board',

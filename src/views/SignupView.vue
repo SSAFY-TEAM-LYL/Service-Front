@@ -14,6 +14,7 @@ const form = ref({
 })
 const errors = ref({})
 const loading = ref(false)
+const canRestoreDeletedMember = ref(false)
 
 const validate = () => {
   const e = {}
@@ -29,6 +30,7 @@ const validate = () => {
 const handleSignup = async () => {
   if (!validate()) return
   loading.value = true
+  canRestoreDeletedMember.value = false
   try {
     await auth.signup({
       nickname: form.value.nickname,
@@ -37,11 +39,19 @@ const handleSignup = async () => {
     })
     router.push('/')
   } catch (e) {
+    if (e.response?.data?.code === 'DELETED_MEMBER') {
+      canRestoreDeletedMember.value = true
+    }
     errors.value.general = e.response?.data?.message || '회원가입에 실패했습니다.'
   } finally {
     loading.value = false
   }
 }
+
+const restoreRoute = () => ({
+  name: 'account-restore',
+  query: form.value.email.trim() ? { email: form.value.email.trim() } : {},
+})
 </script>
 
 <template>
@@ -104,7 +114,16 @@ const handleSignup = async () => {
           <p v-if="errors.passwordConfirm" class="error-text">{{ errors.passwordConfirm }}</p>
         </div>
 
-        <p v-if="errors.general" class="error-text" style="margin-bottom: var(--space-4); text-align: center;">{{ errors.general }}</p>
+        <div v-if="errors.general" class="form-message">
+          <p class="error-text">{{ errors.general }}</p>
+          <RouterLink
+            v-if="canRestoreDeletedMember"
+            :to="restoreRoute()"
+            class="btn btn-outline btn-block restore-button"
+          >
+            계정 복구하기
+          </RouterLink>
+        </div>
 
         <button type="submit" class="btn btn-primary btn-block" :disabled="loading">
           {{ loading ? '가입 중...' : '회원가입' }}
@@ -156,6 +175,19 @@ const handleSignup = async () => {
 
 .auth-form {
   margin-bottom: var(--space-4);
+}
+
+.form-message {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+  text-align: center;
+}
+
+.restore-button {
+  border-color: var(--color-primary);
+  color: var(--color-primary-dark);
 }
 
 .auth-footer {
