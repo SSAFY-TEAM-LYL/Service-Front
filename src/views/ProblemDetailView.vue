@@ -1,15 +1,43 @@
 <script setup>
-import { computed, onMounted, ref, watch } from 'vue'
-import { RouterLink, useRoute } from 'vue-router'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { fetchProblem } from '@/api/problems'
+import { createSubmission, fetchProblemSubmissions, fetchSubmission } from '@/api/submissions'
+import { useAuthStore } from '@/stores/auth'
 
 const route = useRoute()
+const router = useRouter()
+const auth = useAuthStore()
 
 const problem = ref(null)
 const loading = ref(true)
 const errorMessage = ref('')
 
+const selectedLanguage = ref('PYTHON3')
+const sourceCode = ref('')
+const submitting = ref(false)
+const submissionError = ref('')
+const latestSubmission = ref(null)
+const recentSubmissions = ref([])
+const recentLoading = ref(false)
+let pollingTimer = null
+
+const languageOptions = [
+  { value: 'PYTHON3', label: 'Python 3' },
+  { value: 'JAVA', label: 'Java' },
+  { value: 'CPP', label: 'C++' },
+]
+
+const codeTemplates = {
+  PYTHON3: 'a, b = map(int, input().split())\nprint(a + b)\n',
+  JAVA:
+    'import java.io.*;\nimport java.util.*;\n\npublic class Main {\n    public static void main(String[] args) throws Exception {\n        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));\n        StringTokenizer st = new StringTokenizer(br.readLine());\n        int a = Integer.parseInt(st.nextToken());\n        int b = Integer.parseInt(st.nextToken());\n        System.out.println(a + b);\n    }\n}\n',
+  CPP:
+    '#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n    ios::sync_with_stdio(false);\n    cin.tie(nullptr);\n\n    int a, b;\n    cin >> a >> b;\n    cout << a + b << \'\\n\';\n    return 0;\n}\n',
+}
+
 const problemId = computed(() => route.params.problemId)
+const canSubmit = computed(() => sourceCode.value.trim() && !submitting.value)
 
 const samples = computed(() => {
   return Array.isArray(problem.value?.samples) ? problem.value.samples : []
@@ -26,6 +54,8 @@ const constraints = computed(() => {
     .map((line) => line.trim())
     .filter(Boolean)
 })
+
+const latestStatusClass = computed(() => statusClass(latestSubmission.value?.status))
 
 const formatConstraint = (constraint) => {
   if (!constraint) return ''
@@ -49,7 +79,48 @@ const formatTimeLimit = (value) => {
   return `${value}ms`
 }
 
-const getErrorMessage = (error) => {
+const statusLabel = (status) => {
+  const labels = {
+    PENDING: '대기 중',
+    JUDGING: '채점 중',
+    ACCEPTED: '정답',
+    WRONG_ANSWER: '오답',
+    COMPILE_ERROR: '컴파일 에러',
+    RUNTIME_ERROR: '런타임 에러',
+    TIME_LIMIT_EXCEEDED: '시간 초과',
+    INTERNAL_ERROR: '채점 오류',
+  }
+  return labels[status] || '-'
+}
+
+const statusClass = (status) => {
+  if (status === 'ACCEPTED') return 'status-accepted'
+  if (status === 'PENDING' || status === 'JUDGING') return 'status-running'
+  if (!status) return ''
+  return 'status-failed'
+}
+
+const isInProgress = (status) => status === 'PENDING' || status === 'JUDGING'
+
+const formatUsage = (submission) => {
+  if (!submission) return '-'
+  const time = submission.maxTimeMs === null || submission.maxTimeMs === undefined ? '-' : `${submission.maxTimeMs}ms`
+  const memory =
+    submission.maxMemoryKb === null || submission.maxMemoryKb === undefined ? '-' : `${submission.maxMemoryKb}KB`
+  return `${time} / ${memory}`
+}
+
+const formatDate = (value) => {
+  if (!value) return '-'
+  return new Date(value).toLocaleString('ko-KR', {
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
+const getProblemErrorMessage = (error) => {
   if (error.response?.status === 404) {
     return '문제를 찾을 수 없습니다.'
   }
@@ -59,24 +130,138 @@ const getErrorMessage = (error) => {
   return error.response?.data?.message || '문제를 불러오지 못했습니다.'
 }
 
+const getSubmissionErrorMessage = (error) => {
+  if (error.response?.status === 401) {
+    return '로그인 후 제출할 수 있습니다.'
+  }
+  if (error.response?.status === 503) {
+    return '채점 서버에 연결할 수 없습니다.'
+  }
+  return error.response?.data?.message || '제출에 실패했습니다.'
+}
+
 const loadProblem = async () => {
   loading.value = true
   errorMessage.value = ''
+  stopPolling()
   try {
     problem.value = await fetchProblem(problemId.value)
+    await loadRecentSubmissions()
   } catch (error) {
     problem.value = null
-    errorMessage.value = getErrorMessage(error)
+    errorMessage.value = getProblemErrorMessage(error)
   } finally {
     loading.value = false
   }
 }
 
-onMounted(loadProblem)
+const loadRecentSubmissions = async () => {
+  if (!auth.isLoggedIn) {
+    recentSubmissions.value = []
+    return
+  }
+  recentLoading.value = true
+  try {
+    const data = await fetchProblemSubmissions(problemId.value, { size: 5 })
+    recentSubmissions.value = data.items || []
+    latestSubmission.value = recentSubmissions.value[0] || latestSubmission.value
+    if (latestSubmission.value && isInProgress(latestSubmission.value.status)) {
+      startPolling(latestSubmission.value.id)
+    }
+  } catch {
+    recentSubmissions.value = []
+  } finally {
+    recentLoading.value = false
+  }
+}
+
+const resetTemplate = () => {
+  sourceCode.value = codeTemplates[selectedLanguage.value]
+}
+
+const submitCode = async () => {
+  if (!auth.isLoggedIn) {
+    router.push({ name: 'login', query: { redirect: route.fullPath } })
+    return
+  }
+  if (!sourceCode.value.trim()) {
+    submissionError.value = '제출할 코드를 입력해주세요.'
+    return
+  }
+
+  submitting.value = true
+  submissionError.value = ''
+  stopPolling()
+  try {
+    const submission = await createSubmission(problemId.value, {
+      language: selectedLanguage.value,
+      sourceCode: sourceCode.value,
+    })
+    latestSubmission.value = submission
+    recentSubmissions.value = [
+      submission,
+      ...recentSubmissions.value.filter((item) => item.id !== submission.id),
+    ].slice(0, 5)
+    if (isInProgress(submission.status)) {
+      startPolling(submission.id)
+    }
+  } catch (error) {
+    submissionError.value = getSubmissionErrorMessage(error)
+  } finally {
+    submitting.value = false
+  }
+}
+
+const startPolling = (submissionId) => {
+  stopPolling()
+  pollingTimer = window.setInterval(async () => {
+    try {
+      const submission = await fetchSubmission(submissionId)
+      latestSubmission.value = submission
+      recentSubmissions.value = recentSubmissions.value.map((item) =>
+        item.id === submission.id ? submission : item,
+      )
+      if (!isInProgress(submission.status)) {
+        stopPolling()
+        await loadRecentSubmissions()
+      }
+    } catch (error) {
+      submissionError.value = getSubmissionErrorMessage(error)
+      stopPolling()
+    }
+  }, 1500)
+}
+
+const stopPolling = () => {
+  if (pollingTimer) {
+    window.clearInterval(pollingTimer)
+    pollingTimer = null
+  }
+}
+
+onMounted(async () => {
+  resetTemplate()
+  await loadProblem()
+})
+
+onBeforeUnmount(() => {
+  stopPolling()
+})
 
 watch(problemId, () => {
   loadProblem()
 })
+
+watch(selectedLanguage, () => {
+  resetTemplate()
+})
+
+watch(
+  () => auth.isLoggedIn,
+  () => {
+    loadRecentSubmissions()
+  },
+)
 </script>
 
 <template>
@@ -93,73 +278,180 @@ watch(problemId, () => {
         <button type="button" class="btn btn-outline" @click="loadProblem">다시 시도</button>
       </div>
 
-      <article v-else-if="problem" class="statement">
-        <header class="statement-header">
-          <div>
-            <span class="problem-id">#{{ problem.id }}</span>
-            <h1>{{ problem.title }}</h1>
-          </div>
-          <dl class="meta-list">
+      <div v-else-if="problem" class="solve-layout">
+        <article class="statement">
+          <header class="statement-header">
             <div>
-              <dt>시간 제한</dt>
-              <dd>{{ formatTimeLimit(problem.timeLimitMs) }}</dd>
+              <span class="problem-id">#{{ problem.id }}</span>
+              <h1>{{ problem.title }}</h1>
             </div>
-          </dl>
-        </header>
-
-        <section class="statement-section">
-          <h2>문제 설명</h2>
-          <p class="pre-line">{{ problem.description }}</p>
-        </section>
-
-        <section class="statement-section">
-          <h2>입력</h2>
-          <p class="pre-line">{{ problem.inputFormat || '-' }}</p>
-        </section>
-
-        <section class="statement-section">
-          <h2>출력</h2>
-          <p class="pre-line">{{ problem.outputFormat || '-' }}</p>
-        </section>
-
-        <section class="statement-section">
-          <h2>제약</h2>
-          <ul v-if="constraints.length > 0" class="constraint-list">
-            <li v-for="constraint in constraints" :key="constraint">{{ constraint }}</li>
-          </ul>
-          <p v-else class="muted">-</p>
-        </section>
-
-        <section class="statement-section">
-          <h2>예시</h2>
-          <div v-if="samples.length > 0" class="sample-list">
-            <div v-for="(sample, index) in samples" :key="index" class="sample-item">
-              <div class="sample-block">
-                <h3>입력 {{ index + 1 }}</h3>
-                <pre>{{ sampleInput(sample) }}</pre>
+            <dl class="meta-list">
+              <div>
+                <dt>시간 제한</dt>
+                <dd>{{ formatTimeLimit(problem.timeLimitMs) }}</dd>
               </div>
-              <div class="sample-block">
-                <h3>출력 {{ index + 1 }}</h3>
-                <pre>{{ sampleOutput(sample) }}</pre>
+            </dl>
+          </header>
+
+          <section class="statement-section">
+            <h2>문제 설명</h2>
+            <p class="pre-line">{{ problem.description }}</p>
+          </section>
+
+          <section class="statement-section">
+            <h2>입력</h2>
+            <p class="pre-line">{{ problem.inputFormat || '-' }}</p>
+          </section>
+
+          <section class="statement-section">
+            <h2>출력</h2>
+            <p class="pre-line">{{ problem.outputFormat || '-' }}</p>
+          </section>
+
+          <section class="statement-section">
+            <h2>제약</h2>
+            <ul v-if="constraints.length > 0" class="constraint-list">
+              <li v-for="constraint in constraints" :key="constraint">{{ constraint }}</li>
+            </ul>
+            <p v-else class="muted">-</p>
+          </section>
+
+          <section class="statement-section">
+            <h2>예시</h2>
+            <div v-if="samples.length > 0" class="sample-list">
+              <div v-for="(sample, index) in samples" :key="index" class="sample-item">
+                <div class="sample-block">
+                  <h3>입력 {{ index + 1 }}</h3>
+                  <pre>{{ sampleInput(sample) }}</pre>
+                </div>
+                <div class="sample-block">
+                  <h3>출력 {{ index + 1 }}</h3>
+                  <pre>{{ sampleOutput(sample) }}</pre>
+                </div>
               </div>
             </div>
+            <p v-else class="muted">-</p>
+          </section>
+        </article>
+
+        <aside class="editor-panel">
+          <div class="editor-toolbar">
+            <div class="language-tabs" role="tablist" aria-label="언어 선택">
+              <button
+                v-for="language in languageOptions"
+                :key="language.value"
+                type="button"
+                class="language-tab"
+                :class="{ active: selectedLanguage === language.value }"
+                @click="selectedLanguage = language.value"
+              >
+                {{ language.label }}
+              </button>
+            </div>
+            <button type="button" class="btn btn-ghost btn-sm" @click="resetTemplate">초기화</button>
           </div>
-          <p v-else class="muted">-</p>
-        </section>
-      </article>
+
+          <textarea
+            v-model="sourceCode"
+            class="code-editor"
+            spellcheck="false"
+            autocomplete="off"
+            autocapitalize="off"
+            rows="20"
+          ></textarea>
+
+          <div v-if="submissionError" class="submit-message error-message">
+            {{ submissionError }}
+          </div>
+
+          <div class="submit-actions">
+            <p v-if="!auth.isLoggedIn" class="muted">로그인 후 제출할 수 있습니다.</p>
+            <button
+              type="button"
+              class="btn btn-primary btn-lg"
+              :disabled="!canSubmit"
+              @click="submitCode"
+            >
+              {{ submitting ? '제출 중...' : auth.isLoggedIn ? '제출하기' : '로그인하고 제출' }}
+            </button>
+          </div>
+
+          <section class="result-panel">
+            <header class="result-header">
+              <h2>채점 결과</h2>
+              <span v-if="latestSubmission" class="status-badge" :class="latestStatusClass">
+                {{ statusLabel(latestSubmission.status) }}
+              </span>
+            </header>
+
+            <div v-if="latestSubmission" class="result-body">
+              <dl class="result-grid">
+                <div>
+                  <dt>통과</dt>
+                  <dd>{{ latestSubmission.passedTestCount }} / {{ latestSubmission.totalTestCount }}</dd>
+                </div>
+                <div>
+                  <dt>시간 / 메모리</dt>
+                  <dd>{{ formatUsage(latestSubmission) }}</dd>
+                </div>
+                <div>
+                  <dt>언어</dt>
+                  <dd>{{ latestSubmission.language }}</dd>
+                </div>
+                <div>
+                  <dt>제출</dt>
+                  <dd>{{ formatDate(latestSubmission.submittedAt) }}</dd>
+                </div>
+              </dl>
+              <pre v-if="latestSubmission.errorMessage" class="judge-message">{{
+                latestSubmission.errorMessage
+              }}</pre>
+            </div>
+
+            <p v-else class="muted">아직 제출한 코드가 없습니다.</p>
+          </section>
+
+          <section class="recent-panel">
+            <header class="result-header">
+              <h2>최근 제출</h2>
+              <button
+                v-if="auth.isLoggedIn"
+                type="button"
+                class="btn btn-ghost btn-sm"
+                @click="loadRecentSubmissions"
+              >
+                새로고침
+              </button>
+            </header>
+            <p v-if="recentLoading" class="muted">불러오는 중...</p>
+            <ul v-else-if="recentSubmissions.length > 0" class="recent-list">
+              <li v-for="submission in recentSubmissions" :key="submission.id">
+                <span class="status-badge" :class="statusClass(submission.status)">
+                  {{ statusLabel(submission.status) }}
+                </span>
+                <span>{{ submission.language }}</span>
+                <span>{{ submission.passedTestCount }} / {{ submission.totalTestCount }}</span>
+                <span>{{ formatDate(submission.submittedAt) }}</span>
+              </li>
+            </ul>
+            <p v-else class="muted">최근 제출이 없습니다.</p>
+          </section>
+        </aside>
+      </div>
     </div>
   </div>
 </template>
 
 <style scoped>
 .problem-detail {
+  min-height: calc(100vh - 72px);
   background: linear-gradient(90deg, var(--color-bg) 0%, var(--color-bg) 50%, var(--color-surface) 50%, var(--color-surface) 100%);
 }
 
 .detail-container {
   padding-top: var(--space-8);
   padding-bottom: var(--space-12);
-  max-width: 1120px;
+  max-width: 1440px;
 }
 
 .back-link {
@@ -174,8 +466,15 @@ watch(problemId, () => {
   color: var(--color-primary-dark);
 }
 
+.solve-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(440px, 0.82fr);
+  gap: var(--space-6);
+  align-items: start;
+}
+
 .statement {
-  max-width: 760px;
+  min-width: 0;
   padding: var(--space-8);
   border: 1px solid var(--color-border-light);
   border-radius: var(--radius-md);
@@ -257,6 +556,7 @@ watch(problemId, () => {
 
 .muted {
   color: var(--color-text-muted);
+  font-size: var(--font-sm);
 }
 
 .sample-list {
@@ -281,8 +581,8 @@ watch(problemId, () => {
   font-weight: 800;
 }
 
-.sample-block pre {
-  min-height: 96px;
+.sample-block pre,
+.judge-message {
   overflow: auto;
   padding: var(--space-4);
   border: 1px solid var(--color-border);
@@ -292,6 +592,10 @@ watch(problemId, () => {
   font-size: var(--font-sm);
   line-height: 1.6;
   white-space: pre-wrap;
+}
+
+.sample-block pre {
+  min-height: 96px;
 }
 
 .detail-state {
@@ -306,11 +610,200 @@ watch(problemId, () => {
   color: var(--color-text-secondary);
 }
 
-@media (max-width: 860px) {
+.editor-panel {
+  position: sticky;
+  top: var(--space-6);
+  display: grid;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+.editor-toolbar,
+.submit-actions,
+.result-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.language-tabs {
+  display: inline-flex;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg);
+}
+
+.language-tab {
+  min-width: 88px;
+  padding: var(--space-2) var(--space-3);
+  color: var(--color-text-secondary);
+  font-size: var(--font-sm);
+  font-weight: 800;
+}
+
+.language-tab + .language-tab {
+  border-left: 1px solid var(--color-border);
+}
+
+.language-tab.active {
+  background: var(--color-primary);
+  color: #fff;
+}
+
+.code-editor {
+  width: 100%;
+  min-height: 480px;
+  resize: vertical;
+  padding: var(--space-4);
+  border: 1px solid #1f2937;
+  border-radius: var(--radius-md);
+  outline: none;
+  background: #0f172a;
+  color: #e5e7eb;
+  box-shadow: var(--shadow-sm);
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  font-size: var(--font-sm);
+  line-height: 1.65;
+  tab-size: 4;
+}
+
+.code-editor:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(32, 201, 151, 0.16);
+}
+
+.submit-actions {
+  padding: var(--space-4);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-md);
+  background: var(--color-bg);
+}
+
+.submit-actions .btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+  transform: none;
+}
+
+.submit-message {
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  font-size: var(--font-sm);
+  font-weight: 700;
+}
+
+.error-message {
+  border: 1px solid #fecaca;
+  background: var(--color-error-light);
+  color: var(--color-error);
+}
+
+.result-panel,
+.recent-panel {
+  display: grid;
+  gap: var(--space-4);
+  padding: var(--space-5);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-md);
+  background: var(--color-bg);
+  box-shadow: var(--shadow-sm);
+}
+
+.result-header h2 {
+  font-size: var(--font-lg);
+  font-weight: 800;
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 68px;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-full);
+  font-size: var(--font-xs);
+  font-weight: 900;
+}
+
+.status-accepted {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.status-running {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.status-failed {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.result-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.result-grid div {
+  padding: var(--space-3);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+}
+
+.result-grid dt {
+  color: var(--color-text-secondary);
+  font-size: var(--font-xs);
+  font-weight: 800;
+}
+
+.result-grid dd {
+  margin-top: var(--space-1);
+  font-size: var(--font-sm);
+  font-weight: 900;
+}
+
+.recent-list {
+  display: grid;
+  gap: var(--space-2);
+  list-style: none;
+}
+
+.recent-list li {
+  display: grid;
+  grid-template-columns: 84px 64px 72px minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--color-border-light);
+  color: var(--color-text-secondary);
+  font-size: var(--font-xs);
+  font-weight: 700;
+}
+
+.recent-list li:last-child {
+  border-bottom: 0;
+}
+
+@media (max-width: 1080px) {
   .problem-detail {
     background: var(--color-bg);
   }
 
+  .solve-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .editor-panel {
+    position: static;
+  }
+}
+
+@media (max-width: 860px) {
   .detail-container {
     padding: var(--space-6) var(--space-4) var(--space-10);
   }
@@ -319,7 +812,10 @@ watch(problemId, () => {
     padding: var(--space-5);
   }
 
-  .statement-header {
+  .statement-header,
+  .submit-actions,
+  .result-header {
+    align-items: flex-start;
     flex-direction: column;
   }
 
@@ -327,8 +823,22 @@ watch(problemId, () => {
     font-size: var(--font-2xl);
   }
 
-  .sample-item {
+  .sample-item,
+  .result-grid {
     grid-template-columns: 1fr;
+  }
+
+  .language-tabs {
+    width: 100%;
+  }
+
+  .language-tab {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .code-editor {
+    min-height: 380px;
   }
 }
 </style>
