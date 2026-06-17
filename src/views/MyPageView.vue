@@ -212,9 +212,9 @@ const handleWithdrawal = async () => {
 
 <style scoped>
 .mypage {
-  min-height: calc(100vh - 60px - 64px);
-  padding: var(--space-10) 0 var(--space-16);
-  background: var(--color-bg-secondary);
+  min-height: 100%;
+  padding: 0;
+  background: transparent;
 }
 
 .mypage-inner {
@@ -226,9 +226,9 @@ const handleWithdrawal = async () => {
 .profile-summary,
 .settings-section {
   background: var(--color-bg);
-  border: 1px solid var(--color-border);
+  border: 3px solid var(--color-border);
   border-radius: var(--radius-md);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--shadow-md);
 }
 
 .profile-summary {
@@ -250,7 +250,8 @@ const handleWithdrawal = async () => {
   height: 100%;
   border-radius: var(--radius-full);
   object-fit: cover;
-  border: 1px solid var(--color-border);
+  border: 3px solid var(--color-border);
+  box-shadow: 3px 3px 0 var(--color-border-light);
 }
 
 .profile-avatar-fallback,
@@ -269,7 +270,8 @@ const handleWithdrawal = async () => {
 
 .profile-summary h1 {
   font-size: var(--font-2xl);
-  font-weight: 800;
+  font-family: var(--font-mono);
+  font-weight: 950;
   margin-bottom: var(--space-1);
 }
 
@@ -286,7 +288,7 @@ const handleWithdrawal = async () => {
 }
 
 .settings-section {
-  padding: var(--space-8);
+  padding: var(--space-6);
 }
 
 .section-header {
@@ -295,7 +297,8 @@ const handleWithdrawal = async () => {
 
 .section-header h2 {
   font-size: var(--font-xl);
-  font-weight: 800;
+  font-family: var(--font-mono);
+  font-weight: 950;
   margin-bottom: var(--space-1);
 }
 

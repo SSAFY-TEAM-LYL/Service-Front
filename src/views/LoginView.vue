@@ -1,6 +1,7 @@
 <script setup>
-import { ref, watch } from 'vue'
+import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
+import AqLogo from '@/components/AqLogo.vue'
 import { useAuthStore } from '@/stores/auth'
 import { getApiErrorMessage, getOAuthErrorMessage } from '@/utils/authErrors'
 
@@ -13,16 +14,60 @@ const password = ref('')
 const errorMsg = ref('')
 const canRestoreDeletedMember = ref(false)
 const loading = ref(false)
+const rememberMe = ref(true)
+const showPassword = ref(false)
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api'
+
+const leftStats = [
+  { label: 'OPEN PROBLEMS', value: 12, tone: 'green' },
+  { label: 'CODE RUNNERS', value: 3, tone: 'purple' },
+  { label: 'BOARD THREADS', value: 28, tone: 'gold' },
+]
+const displayedStats = ref(leftStats.map(() => 0))
+
+let statDelayTimer = 0
+const statTimers = []
+
+const clearStatTimers = () => {
+  if (statDelayTimer) {
+    window.clearTimeout(statDelayTimer)
+    statDelayTimer = 0
+  }
+  while (statTimers.length > 0) {
+    window.clearInterval(statTimers.pop())
+  }
+}
+
+const startStatCounter = () => {
+  clearStatTimers()
+  displayedStats.value = leftStats.map(() => 0)
+
+  leftStats.forEach((stat, index) => {
+    const stepMs = Math.max(48, Math.round(1500 / stat.value))
+    const timer = window.setTimeout(() => {
+      let nextValue = 0
+      const interval = window.setInterval(() => {
+        nextValue += 1
+        displayedStats.value = displayedStats.value.map((value, valueIndex) =>
+          valueIndex === index ? Math.min(nextValue, stat.value) : value,
+        )
+        if (nextValue >= stat.value) {
+          window.clearInterval(interval)
+        }
+      }, stepMs)
+      statTimers.push(interval)
+    }, 180 * index)
+    statTimers.push(timer)
+  })
+}
 
 watch(
   () => route.query.error,
   (error) => {
-    if (error) {
-      errorMsg.value = getOAuthErrorMessage(error)
-      canRestoreDeletedMember.value = String(error).toUpperCase() === 'DELETED_MEMBER'
-    }
+    if (!error) return
+    errorMsg.value = getOAuthErrorMessage(error)
+    canRestoreDeletedMember.value = String(error).toUpperCase() === 'DELETED_MEMBER'
   },
   { immediate: true },
 )
@@ -57,191 +102,594 @@ const restoreRoute = () => ({
   name: 'account-restore',
   query: email.value.trim() ? { email: email.value.trim() } : {},
 })
+
+onMounted(() => {
+  statDelayTimer = window.setTimeout(startStatCounter, 280)
+})
+
+onBeforeUnmount(() => {
+  clearStatTimers()
+})
 </script>
 
 <template>
-  <div class="auth-page">
-    <div class="auth-card fade-in">
-      <div class="auth-header">
-        <h1 class="auth-title">로그인</h1>
-        <p class="auth-subtitle">LYL에 오신 것을 환영합니다</p>
+  <main class="login-screen">
+    <section class="login-side" aria-label="알고퀘스트 소개">
+      <RouterLink to="/" class="login-brand" aria-label="알고퀘스트 홈">
+        <span class="login-brand-mark" aria-hidden="true">
+          <AqLogo class="login-brand-emblem" />
+        </span>
+        <span class="login-brand-text">
+          알고퀘스트
+          <small>▶ ALGO QUEST</small>
+        </span>
+      </RouterLink>
+
+      <div class="login-status">
+        <span class="status-dot" aria-hidden="true" />
+        <strong>SERVICE FRONT ONLINE</strong>
       </div>
 
-      <form @submit.prevent="handleLogin" class="auth-form">
-        <div class="input-group">
-          <label for="login-email">이메일</label>
-          <input
-            type="email"
-            id="login-email"
-            v-model="email"
-            placeholder="you@example.com"
-            autocomplete="email"
-            required
-          />
-        </div>
-
-        <div class="input-group">
-          <label for="login-password">비밀번호</label>
-          <input
-            type="password"
-            id="login-password"
-            v-model="password"
-            placeholder="비밀번호를 입력하세요"
-            autocomplete="current-password"
-            required
-          />
-        </div>
-
-        <div v-if="errorMsg" class="form-message">
-          <p class="error-text">{{ errorMsg }}</p>
-          <RouterLink
-            v-if="canRestoreDeletedMember"
-            :to="restoreRoute()"
-            class="btn btn-outline btn-block restore-button"
-          >
-            계정 복구하기
-          </RouterLink>
-        </div>
-
-        <button type="submit" class="btn btn-primary btn-block" :disabled="loading">
-          {{ loading ? '로그인 중...' : '로그인' }}
-        </button>
-      </form>
-
-      <div class="auth-divider"><span>또는</span></div>
-
-      <div class="social-buttons">
-        <button type="button" class="btn btn-outline btn-block social-btn" @click="startOAuth('google')">
-          <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
-          Google로 계속하기
-        </button>
-        <button type="button" class="btn btn-block social-btn kakao-btn" @click="startOAuth('kakao')">
-          <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#000" d="M12 3C6.48 3 2 6.36 2 10.5c0 2.63 1.74 4.95 4.38 6.3l-1.12 4.1c-.1.36.31.65.62.44l4.83-3.2c.42.04.85.06 1.29.06 5.52 0 10-3.36 10-7.5S17.52 3 12 3z"/></svg>
-          Kakao로 계속하기
-        </button>
+      <div class="login-copy">
+        <p>WELCOME</p>
+        <h1>BACK, HERO</h1>
+        <span>문제 풀이, 코드 제출, 게시판까지 실제 서비스 기능으로 퀘스트를 이어가세요.</span>
       </div>
 
-      <p class="auth-footer">
-        아직 계정이 없으신가요?
-        <RouterLink to="/signup" class="auth-link">회원가입</RouterLink>
-      </p>
-      <p class="restore-footer">
-        <RouterLink to="/account/restore" class="auth-link">탈퇴 계정 복구</RouterLink>
-      </p>
-    </div>
-  </div>
+      <dl class="login-stats" aria-label="서비스 요약">
+        <div v-for="(stat, index) in leftStats" :key="stat.label">
+          <dt>{{ stat.label }}</dt>
+          <dd class="login-stat-value" :class="`tone-${stat.tone}`">
+            {{ displayedStats[index] }}
+          </dd>
+        </div>
+      </dl>
+
+      <blockquote class="login-quote">
+        <p>"하루 한 문제씩 꾸준히 푸는 것이 알고리즘 실력 향상의 가장 빠른 길입니다."</p>
+        <footer>- 알고퀘스트 학습 가이드</footer>
+      </blockquote>
+    </section>
+
+    <section class="login-stage" aria-label="로그인">
+      <div class="login-window">
+        <div class="login-window-title">■ PLAYER LOGIN</div>
+
+        <div class="login-window-body">
+          <div class="login-socials">
+            <button type="button" class="social-login" @click="startOAuth('google')">
+              <span class="google-mark">G</span>
+              <strong>Google로 로그인</strong>
+            </button>
+            <button type="button" class="social-login kakao-social" @click="startOAuth('kakao')">
+              <span class="social-icon">K</span>
+              <strong>Kakao로 로그인</strong>
+            </button>
+          </div>
+
+          <div class="login-divider"><span>OR</span></div>
+
+          <form class="login-form" @submit.prevent="handleLogin">
+            <label class="login-field" for="login-email">
+              <span>▶ EMAIL</span>
+              <input
+                id="login-email"
+                v-model="email"
+                type="email"
+                autocomplete="email"
+                placeholder="hero@quest.com"
+                required
+              />
+            </label>
+
+            <label class="login-field" for="login-password">
+              <span>▶ PASSWORD</span>
+              <div class="password-box">
+                <input
+                  id="login-password"
+                  v-model="password"
+                  :type="showPassword ? 'text' : 'password'"
+                  autocomplete="current-password"
+                  placeholder="••••••••"
+                  required
+                />
+                <button type="button" aria-label="비밀번호 보기 전환" @click="showPassword = !showPassword">
+                  {{ showPassword ? 'HIDE' : 'SHOW' }}
+                </button>
+              </div>
+            </label>
+
+            <label class="remember-row">
+              <input v-model="rememberMe" type="checkbox" />
+              <span>로그인 상태 유지</span>
+            </label>
+
+            <div v-if="errorMsg" class="message error login-error">
+              <p>{{ errorMsg }}</p>
+              <RouterLink v-if="canRestoreDeletedMember" :to="restoreRoute()" class="btn btn-outline btn-block">
+                계정 복구하기
+              </RouterLink>
+            </div>
+
+            <button type="submit" class="enter-quest-btn" :disabled="loading">
+              <span>{{ loading ? 'ENTERING...' : 'ENTER QUEST' }}</span>
+              <span aria-hidden="true">→</span>
+            </button>
+          </form>
+
+          <p class="login-bottom-link">
+            계정이 없으신가요?
+            <RouterLink to="/signup">회원가입</RouterLink>
+            <span aria-hidden="true"> · </span>
+            <RouterLink to="/account/restore">계정 복구</RouterLink>
+          </p>
+        </div>
+      </div>
+    </section>
+  </main>
 </template>
 
 <style scoped>
-.auth-page {
+.login-screen {
+  display: grid;
+  grid-template-columns: minmax(360px, 40vw) minmax(0, 1fr);
+  min-height: 100dvh;
+  background:
+    linear-gradient(90deg, var(--ink) 0 40%, transparent 40%),
+    radial-gradient(circle at 1px 1px, rgba(124, 58, 237, 0.18) 1.5px, transparent 1.5px) 0 0 / 38px 38px,
+    #f4f0ea;
+  color: var(--ink);
+}
+
+.login-side {
+  display: grid;
+  align-content: space-between;
+  gap: clamp(18px, 2vw, 34px);
+  min-height: 100dvh;
+  background: var(--ink);
+  color: #f7f3ff;
+  padding: clamp(24px, 3vw, 52px);
+}
+
+.login-brand {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  width: max-content;
+}
+
+.login-brand-mark {
+  display: grid;
+  place-items: center;
+  width: clamp(58px, 4.9vw, 74px);
+  height: clamp(58px, 4.9vw, 74px);
+}
+
+.login-brand-emblem {
+  width: 100%;
+  height: 100%;
+  filter: drop-shadow(5px 5px 0 #12092f);
+}
+
+.login-brand-text {
+  color: #c4b5fd;
+  font-family: var(--font-mono);
+  font-size: clamp(1.05rem, 1.4vw, 1.45rem);
+  font-weight: 950;
+  text-shadow: 4px 4px 0 var(--primary-shadow);
+}
+
+.login-brand small {
+  display: block;
+  margin-top: 7px;
+  color: var(--green);
+  font-size: 0.76rem;
+  letter-spacing: 0.18em;
+  text-shadow: none;
+}
+
+.login-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  width: fit-content;
+  border: 3px solid var(--primary);
+  background: rgba(124, 58, 237, 0.12);
+  box-shadow: 5px 5px 0 var(--primary-shadow);
+  color: var(--green);
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  font-weight: 950;
+  letter-spacing: 0.12em;
+  padding: 13px 18px;
+}
+
+.status-dot {
+  width: 12px;
+  height: 12px;
+  background: var(--cyan);
+}
+
+.login-copy {
+  display: grid;
+  gap: 10px;
+  max-width: 560px;
+}
+
+.login-copy p,
+.login-copy h1 {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: clamp(2.2rem, 3.8vw, 4.1rem);
+  font-weight: 950;
+  letter-spacing: 0;
+  line-height: 1.05;
+}
+
+.login-copy p {
+  color: #fff;
+}
+
+.login-copy h1 {
+  color: #7dd3fc;
+}
+
+.login-copy span {
+  max-width: 430px;
+  color: #c4b5fd;
+  font-size: clamp(0.95rem, 1.05vw, 1.12rem);
+  font-weight: 750;
+  line-height: 1.75;
+  margin-top: clamp(8px, 1.2vw, 18px);
+}
+
+.login-stats {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+}
+
+.login-stats div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  min-height: 62px;
+  border: 3px solid var(--primary-shadow);
+  background: #130b36;
+  box-shadow: 5px 5px 0 var(--primary-shadow);
+  padding: 14px 20px;
+}
+
+.login-stats dt,
+.login-stats dd {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-weight: 950;
+}
+
+.login-stats dt {
+  color: #c4b5fd;
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+}
+
+.login-stats dd {
+  color: white;
+  font-size: 1.25rem;
+}
+
+.login-stat-value {
+  display: inline-block;
+  min-width: 3ch;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  animation: login-stat-arrive 520ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes login-stat-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.tone-green {
+  color: var(--green) !important;
+}
+
+.tone-purple {
+  color: #c4b5fd !important;
+}
+
+.tone-gold {
+  color: var(--gold) !important;
+}
+
+.login-quote {
+  border: 3px solid var(--primary-shadow);
+  background: #130b36;
+  box-shadow: 5px 5px 0 var(--primary-shadow);
+  margin: 0;
+  padding: 20px;
+}
+
+.login-quote p {
+  color: #fff;
+  font-weight: 850;
+  line-height: 1.7;
+  margin: 0 0 12px;
+}
+
+.login-quote footer {
+  color: #c4b5fd;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  font-weight: 850;
+}
+
+.login-stage {
+  display: grid;
+  place-items: center;
+  min-height: 100dvh;
+  width: 100%;
+  padding: clamp(24px, 5vw, 88px);
+}
+
+.login-window {
+  width: min(720px, 100%);
+  border: 4px solid var(--ink);
+  background: var(--surface-plain);
+  box-shadow: 8px 8px 0 var(--ink);
+}
+
+.login-window-title {
+  border-bottom: 4px solid var(--ink);
+  background: var(--ink);
+  color: #c4b5fd;
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+  font-weight: 950;
+  letter-spacing: 0.14em;
+  padding: 16px 24px;
+}
+
+.login-window-body {
+  display: grid;
+  gap: clamp(14px, 1.6vw, 20px);
+  padding: clamp(20px, 2.7vw, 36px);
+}
+
+.login-socials,
+.login-form {
+  display: grid;
+  gap: 12px;
+}
+
+.social-login,
+.enter-quest-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: calc(100vh - 60px - 64px);
-  padding: var(--space-8) var(--space-4);
+  gap: 12px;
+  min-height: 56px;
+  border: 4px solid var(--primary-line);
+  background: white;
+  box-shadow: 5px 5px 0 var(--line-soft);
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: clamp(0.92rem, 1vw, 1.08rem);
+  font-weight: 950;
+  transition:
+    box-shadow 120ms ease,
+    transform 120ms ease,
+    border-color 120ms ease;
 }
 
-.auth-card {
+.social-login:hover,
+.enter-quest-btn:hover:not(:disabled) {
+  border-color: var(--primary);
+  box-shadow: 5px 5px 0 var(--primary-shadow);
+  transform: translate(-2px, -2px);
+}
+
+.kakao-social {
+  border-color: #facc15;
+  background: #fef08a;
+  box-shadow: 5px 5px 0 #ca8a04;
+}
+
+.social-icon,
+.google-mark {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  background: rgba(255, 255, 255, 0.45);
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  font-weight: 950;
+}
+
+.google-mark {
+  background: #eff6ff;
+  color: #2563eb;
+}
+
+.login-divider {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 18px;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-weight: 950;
+}
+
+.login-divider::before,
+.login-divider::after {
+  display: block;
+  height: 4px;
+  background: var(--ink);
+  content: "";
+}
+
+.login-field {
+  display: grid;
+  gap: 9px;
+}
+
+.login-field > span {
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  font-weight: 950;
+  letter-spacing: 0.06em;
+}
+
+.login-field input,
+.password-box {
   width: 100%;
-  max-width: 420px;
-  padding: var(--space-10);
-  background: var(--color-bg);
-  border: 1px solid var(--color-border-light);
-  border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-lg);
+  min-height: 56px;
+  border: 4px solid var(--primary-line);
+  background: var(--surface-panel);
 }
 
-.auth-header {
-  text-align: center;
-  margin-bottom: var(--space-8);
+.login-field input {
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-weight: 850;
+  outline: none;
+  padding: 0 18px;
 }
 
-.auth-title {
-  font-size: var(--font-2xl);
-  font-weight: 800;
-  margin-bottom: var(--space-2);
+.login-field input::placeholder {
+  color: var(--muted);
 }
 
-.auth-subtitle {
-  color: var(--color-text-muted);
-  font-size: var(--font-sm);
+.login-field input:focus,
+.password-box:focus-within {
+  border-color: var(--primary);
+  box-shadow: 4px 4px 0 var(--line-soft);
 }
 
-.auth-form {
-  margin-bottom: var(--space-4);
+.password-box {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
 }
 
-.form-message {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  margin-bottom: var(--space-4);
+.password-box input {
+  min-height: 48px;
+  border: 0;
+  background: transparent;
 }
 
-.restore-button {
-  border-color: var(--color-primary);
-  color: var(--color-primary-dark);
+.password-box button {
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 950;
+  padding: 0 16px;
 }
 
-.auth-divider {
+.remember-row {
   display: flex;
   align-items: center;
-  margin: var(--space-6) 0;
-  color: var(--color-text-muted);
-  font-size: var(--font-xs);
+  gap: 12px;
+  width: fit-content;
+  color: var(--muted);
+  font-weight: 800;
 }
 
-.auth-divider::before,
-.auth-divider::after {
-  content: '';
-  flex: 1;
-  border-bottom: 1px solid var(--color-border-light);
+.remember-row input {
+  width: 22px;
+  height: 22px;
+  margin: 0;
+  accent-color: var(--primary);
 }
 
-.auth-divider span {
-  padding: 0 var(--space-3);
+.message.error {
+  display: grid;
+  gap: 10px;
+  border: 3px solid var(--red);
+  background: #fff1f2;
+  color: var(--red-dark);
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  font-weight: 850;
+  padding: 12px;
 }
 
-.social-buttons {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
+.enter-quest-btn {
+  border-color: var(--primary);
+  background: var(--primary);
+  box-shadow: 6px 6px 0 var(--primary-shadow);
+  color: white;
 }
 
-.social-btn {
-  font-weight: 500;
-  gap: var(--space-3);
-}
-
-.kakao-btn {
-  background-color: var(--color-kakao);
-  color: #1a1a1a;
-  border: 1px solid var(--color-kakao);
-}
-
-.kakao-btn:hover {
-  background-color: #f5da00;
-}
-
-.auth-footer {
+.login-bottom-link {
+  color: var(--muted);
+  font-weight: 800;
+  margin: 0;
   text-align: center;
-  margin-top: var(--space-6);
-  font-size: var(--font-sm);
-  color: var(--color-text-secondary);
 }
 
-.restore-footer {
-  text-align: center;
-  margin-top: var(--space-3);
-  font-size: var(--font-sm);
+.login-bottom-link a {
+  color: var(--primary);
+  font-weight: 950;
 }
 
-.auth-link {
-  color: var(--color-primary);
-  font-weight: 600;
+@media (max-width: 1020px) {
+  .login-screen {
+    grid-template-columns: 1fr;
+    background: var(--background);
+  }
+
+  .login-side {
+    order: 2;
+    min-height: auto;
+  }
+
+  .login-stage {
+    min-height: auto;
+  }
 }
 
-.auth-link:hover {
-  text-decoration: underline;
+@media (max-width: 620px) {
+  .login-side,
+  .login-stage {
+    padding: 18px 12px;
+  }
+
+  .login-window-body {
+    padding: 18px;
+  }
+}
+
+@media (max-height: 760px) and (min-width: 1021px) {
+  .login-quote {
+    display: none;
+  }
+
+  .login-side {
+    padding-block: 24px;
+  }
+
+  .login-window-body {
+    gap: 12px;
+    padding-block: 20px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .login-stat-value {
+    animation: none;
+  }
 }
 </style>

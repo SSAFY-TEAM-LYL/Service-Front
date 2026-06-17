@@ -578,14 +578,13 @@ watch(selectedLanguage, (language, oldLanguage) => {
 
 <style scoped>
 .submissions-view {
-  min-height: calc(100vh - 72px);
-  background: var(--color-surface);
+  min-height: 100%;
+  background: transparent;
 }
 
 .submissions-container {
   max-width: 1440px;
-  padding-top: var(--space-8);
-  padding-bottom: var(--space-12);
+  padding: 0;
 }
 
 .submissions-topbar {
@@ -606,6 +605,7 @@ watch(selectedLanguage, (language, oldLanguage) => {
 
 .submissions-topbar h1 {
   font-size: var(--font-3xl);
+  font-family: var(--font-mono);
   font-weight: 900;
 }
 
@@ -614,9 +614,10 @@ watch(selectedLanguage, (language, oldLanguage) => {
   justify-items: center;
   gap: var(--space-4);
   padding: var(--space-16) var(--space-6);
-  border: 1px solid var(--color-border-light);
+  border: 3px solid var(--color-border);
   border-radius: var(--radius-md);
   background: var(--color-bg);
+  box-shadow: var(--shadow-md);
   color: var(--color-text-secondary);
 }
 
@@ -633,10 +634,10 @@ watch(selectedLanguage, (language, oldLanguage) => {
   display: grid;
   gap: var(--space-4);
   padding: var(--space-5);
-  border: 1px solid var(--color-border-light);
+  border: 3px solid var(--color-border);
   border-radius: var(--radius-md);
   background: var(--color-bg);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--shadow-md);
 }
 
 .submission-list-panel {
@@ -664,7 +665,8 @@ watch(selectedLanguage, (language, oldLanguage) => {
 .panel-header h2,
 .workspace-header h2 {
   font-size: var(--font-lg);
-  font-weight: 900;
+  font-family: var(--font-mono);
+  font-weight: 950;
 }
 
 .section-eyebrow {
@@ -687,12 +689,13 @@ watch(selectedLanguage, (language, oldLanguage) => {
   align-items: center;
   gap: var(--space-2);
   padding: var(--space-3);
-  border: 1px solid var(--color-border-light);
+  border: 3px solid var(--color-border-light);
   border-radius: var(--radius-sm);
   color: var(--color-text-secondary);
   text-align: left;
   font-size: var(--font-xs);
-  font-weight: 800;
+  font-family: var(--font-mono);
+  font-weight: 850;
 }
 
 .submission-item.active {
@@ -731,7 +734,7 @@ watch(selectedLanguage, (language, oldLanguage) => {
   display: inline-flex;
   width: fit-content;
   overflow: hidden;
-  border: 1px solid var(--color-border);
+  border: 3px solid var(--color-border);
   border-radius: var(--radius-md);
   background: var(--color-bg);
 }
@@ -741,11 +744,12 @@ watch(selectedLanguage, (language, oldLanguage) => {
   padding: var(--space-2) var(--space-3);
   color: var(--color-text-secondary);
   font-size: var(--font-sm);
-  font-weight: 800;
+  font-family: var(--font-mono);
+  font-weight: 900;
 }
 
 .language-tab + .language-tab {
-  border-left: 1px solid var(--color-border);
+  border-left: 3px solid var(--color-border);
 }
 
 .language-tab.active {
@@ -766,7 +770,7 @@ watch(selectedLanguage, (language, oldLanguage) => {
 .judge-message {
   overflow: auto;
   padding: var(--space-4);
-  border: 1px solid var(--color-border);
+  border: 3px solid var(--ink);
   border-radius: var(--radius-sm);
   background: #111827;
   color: #f9fafb;
@@ -777,12 +781,13 @@ watch(selectedLanguage, (language, oldLanguage) => {
 
 .action-message {
   padding: var(--space-3) var(--space-4);
-  border: 1px solid var(--color-border-light);
+  border: 3px solid var(--color-border-light);
   border-radius: var(--radius-sm);
   background: var(--color-surface);
   color: var(--color-text-secondary);
   font-size: var(--font-sm);
-  font-weight: 800;
+  font-family: var(--font-mono);
+  font-weight: 850;
 }
 
 .review-section.disabled {
@@ -799,8 +804,9 @@ watch(selectedLanguage, (language, oldLanguage) => {
   width: 100%;
   resize: vertical;
   padding: var(--space-3);
-  border: 1px solid var(--color-border);
+  border: 3px solid var(--color-border);
   border-radius: var(--radius-sm);
+  background: var(--color-surface);
   outline: none;
   font: inherit;
   line-height: 1.6;
@@ -809,14 +815,14 @@ watch(selectedLanguage, (language, oldLanguage) => {
 .review-form textarea:focus,
 .review-item textarea:focus {
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgba(32, 201, 151, 0.14);
+  box-shadow: 4px 4px 0 var(--color-border-light);
 }
 
 .review-item {
   display: grid;
   gap: var(--space-3);
   padding: var(--space-4);
-  border: 1px solid var(--color-border-light);
+  border: 3px solid var(--color-border-light);
   border-radius: var(--radius-sm);
   background: var(--color-surface);
 }

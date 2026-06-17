@@ -134,7 +134,7 @@ const handleCancel = () => {
 <style scoped>
 .write-page {
   max-width: 720px;
-  padding: var(--space-10) var(--space-6);
+  padding: 0;
 }
 
 .write-header {
@@ -143,7 +143,15 @@ const handleCancel = () => {
 
 .write-title {
   font-size: var(--font-2xl);
-  font-weight: 800;
+  font-family: var(--font-mono);
+  font-weight: 950;
+}
+
+.write-form {
+  padding: var(--space-6);
+  border: 3px solid var(--color-border);
+  background: var(--color-bg);
+  box-shadow: var(--shadow-md);
 }
 
 .write-form textarea {
@@ -160,12 +168,13 @@ const handleCancel = () => {
 .category-option {
   min-width: 78px;
   padding: var(--space-2) var(--space-4);
-  border: 1px solid var(--color-border);
+  border: 3px solid var(--color-border);
   border-radius: var(--radius-sm);
   color: var(--color-text-secondary);
   background: var(--color-bg);
   font-size: var(--font-sm);
-  font-weight: 700;
+  font-family: var(--font-mono);
+  font-weight: 900;
   transition: all var(--transition-fast);
 }
 

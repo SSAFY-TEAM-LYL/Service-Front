@@ -1,11 +1,41 @@
 <script setup>
 import { computed, ref, watch } from 'vue'
-import { RouterLink, RouterView, useRouter } from 'vue-router'
+import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
+import AqLogo from '@/components/AqLogo.vue'
 import { useAuthStore } from '@/stores/auth'
 
 const auth = useAuthStore()
+const route = useRoute()
 const router = useRouter()
+
 const navImageFailed = ref(false)
+const isProfileOpen = ref(false)
+
+const authRouteNames = ['login', 'signup', 'account-restore', 'oauth-callback']
+
+const isAuthLayout = computed(() => authRouteNames.includes(route.name))
+const isAdmin = computed(() => auth.user?.role === 'ADMIN')
+const showNavProfileImage = computed(() => auth.user?.profileImageUrl && !navImageFailed.value)
+const avatarInitial = computed(() => (auth.user?.nickname || 'U').slice(0, 1).toUpperCase())
+const pageTitle = computed(() => route.meta?.title || routeTitleMap[route.name] || '대시보드')
+
+const mainNavItems = [
+  { to: '/', label: '대시보드', icon: '▦' },
+  { to: '/problems', label: '문제풀기', icon: '</>' },
+  { to: '/board', label: '게시판', icon: '□' },
+]
+
+const routeTitleMap = {
+  main: '대시보드',
+  problems: '문제풀기',
+  'problem-detail': '문제풀기',
+  'problem-submissions': '제출내역',
+  board: '게시판',
+  'board-write': '글쓰기',
+  'board-detail': '게시글',
+  mypage: '내 정보',
+  'admin-problem-publications': '문제 공개 관리',
+}
 
 watch(
   () => auth.user?.profileImageUrl,
@@ -14,209 +44,145 @@ watch(
   },
 )
 
-const showNavProfileImage = computed(() => auth.user?.profileImageUrl && !navImageFailed.value)
-const isAdmin = computed(() => auth.user?.role === 'ADMIN')
+watch(
+  () => route.fullPath,
+  () => {
+    isProfileOpen.value = false
+  },
+)
 
 const handleLogout = () => {
   auth.logout()
+  isProfileOpen.value = false
   router.push('/')
 }
 </script>
 
 <template>
-  <header class="header">
-    <div class="container header-inner">
-      <RouterLink to="/" class="logo">
-        <span class="logo-icon">⟨/⟩</span>
-        <span class="logo-text">LYL</span>
+  <RouterView v-if="isAuthLayout" />
+
+  <div v-else class="app-shell">
+    <aside class="sidebar" aria-label="주요 메뉴">
+      <RouterLink to="/" class="brand" aria-label="알고퀘스트 홈">
+        <span class="brand-mark">
+          <AqLogo class="brand-logo" />
+        </span>
+        <span class="brand-copy">
+          <strong>알고퀘스트</strong>
+          <small>▶ ALGO QUEST</small>
+        </span>
       </RouterLink>
 
-      <nav class="nav">
-        <RouterLink to="/problems" class="nav-link">문제</RouterLink>
-        <RouterLink to="/board" class="nav-link">커뮤니티</RouterLink>
+      <section class="status-panel compact-status" aria-label="서비스 상태">
+        <p class="panel-eyebrow">■ SERVICE FRONT</p>
+        <div class="compact-status-grid">
+          <RouterLink to="/problems">
+            <span>PROBLEMS</span>
+            <strong>OPEN</strong>
+          </RouterLink>
+          <RouterLink to="/board">
+            <span>BOARD</span>
+            <strong>LIVE</strong>
+          </RouterLink>
+        </div>
+      </section>
 
-        <template v-if="auth.isLoggedIn">
-          <RouterLink
-            v-if="isAdmin"
-            to="/admin/problem-publications"
-            class="nav-link"
-          >
-            문제 관리
+      <nav class="nav-groups">
+        <p class="nav-section-title">MAIN MENU</p>
+        <div class="nav-list">
+          <RouterLink v-for="item in mainNavItems" :key="item.to" :to="item.to" class="nav-link">
+            <span class="nav-icon">{{ item.icon }}</span>
+            <span>{{ item.label }}</span>
           </RouterLink>
-          <RouterLink to="/mypage" class="nav-profile" aria-label="마이페이지로 이동">
-            <img
-              v-if="showNavProfileImage"
-              :src="auth.user.profileImageUrl"
-              :alt="`${auth.user?.nickname || '사용자'} 프로필`"
-              class="nav-avatar"
-              @error="navImageFailed = true"
-            />
-            <span v-else class="nav-avatar nav-avatar-fallback">
-              {{ (auth.user?.nickname || 'U').slice(0, 1).toUpperCase() }}
-            </span>
-            <span class="nav-user">{{ auth.user?.nickname || '사용자' }}</span>
-          </RouterLink>
-          <button class="btn btn-ghost" @click="handleLogout">로그아웃</button>
-        </template>
-        <template v-else>
-          <RouterLink to="/login" class="nav-link">로그인</RouterLink>
-          <RouterLink to="/signup" class="btn btn-primary btn-sm">회원가입</RouterLink>
+        </div>
+
+        <template v-if="isAdmin">
+          <p class="nav-section-title">ADMIN</p>
+          <div class="nav-list">
+            <RouterLink to="/admin/problem-publications" class="nav-link">
+              <span class="nav-icon">▣</span>
+              <span>문제 공개 관리</span>
+            </RouterLink>
+          </div>
         </template>
       </nav>
-    </div>
-  </header>
 
-  <main class="main">
-    <RouterView />
-  </main>
+      <div class="side-profile">
+        <RouterLink v-if="auth.isLoggedIn" to="/mypage" class="side-player-card">
+          <img
+            v-if="showNavProfileImage"
+            :src="auth.user.profileImageUrl"
+            :alt="`${auth.user?.nickname || '사용자'} 프로필`"
+            class="side-player-avatar side-player-image"
+            @error="navImageFailed = true"
+          />
+          <span v-else class="side-player-avatar">{{ avatarInitial }}</span>
+          <span>
+            <strong>{{ auth.user?.nickname || '사용자' }}</strong>
+            <p>{{ auth.user?.email || '계정 정보' }}</p>
+          </span>
+        </RouterLink>
 
-  <footer class="footer">
-    <div class="container footer-inner">
-      <span class="footer-logo">⟨/⟩ LYL</span>
-      <span class="footer-copy">&copy; 2026 LYL — 코딩테스트 스터디 플랫폼</span>
-    </div>
-  </footer>
+        <RouterLink v-else to="/login" class="side-player-card">
+          <span class="side-player-avatar">?</span>
+          <span>
+            <strong>게스트</strong>
+            <p>로그인 후 제출 가능</p>
+          </span>
+        </RouterLink>
+      </div>
+    </aside>
+
+    <main class="app-main">
+      <header class="topbar">
+        <h1>{{ pageTitle }}</h1>
+        <div class="top-actions">
+          <RouterLink to="/problems" class="top-search" aria-label="문제 목록으로 이동">
+            <span>⌕</span>
+            <span class="search">문제 목록</span>
+            <kbd>GO</kbd>
+          </RouterLink>
+
+          <div class="profile-menu">
+            <button
+              type="button"
+              class="top-icon-btn top-profile-btn"
+              :aria-expanded="isProfileOpen"
+              aria-haspopup="menu"
+              @click="isProfileOpen = !isProfileOpen"
+            >
+              <img
+                v-if="showNavProfileImage"
+                :src="auth.user.profileImageUrl"
+                :alt="`${auth.user?.nickname || '사용자'} 프로필`"
+                class="top-avatar top-avatar-image"
+                @error="navImageFailed = true"
+              />
+              <span v-else class="top-avatar">{{ avatarInitial }}</span>
+              <span>{{ auth.isLoggedIn ? auth.user?.nickname || '사용자' : '로그인' }}</span>
+              <span aria-hidden="true">⌄</span>
+            </button>
+
+            <div v-if="isProfileOpen" class="dropdown-panel profile-dropdown" role="menu">
+              <template v-if="auth.isLoggedIn">
+                <p class="dropdown-title">{{ auth.user?.email }}</p>
+                <RouterLink to="/mypage" class="dropdown-item" role="menuitem">내 정보 수정</RouterLink>
+                <button type="button" class="dropdown-item" role="menuitem" @click="handleLogout">
+                  로그아웃
+                </button>
+              </template>
+              <template v-else>
+                <RouterLink to="/login" class="dropdown-item" role="menuitem">로그인</RouterLink>
+                <RouterLink to="/signup" class="dropdown-item" role="menuitem">회원가입</RouterLink>
+              </template>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <section class="content">
+        <RouterView />
+      </section>
+    </main>
+  </div>
 </template>
-
-<style scoped>
-/* ===== Header ===== */
-.header {
-  position: sticky;
-  top: 0;
-  z-index: 100;
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(12px);
-  border-bottom: 1px solid var(--color-border-light);
-}
-
-.header-inner {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  height: 60px;
-}
-
-.logo {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-}
-
-.logo-icon {
-  font-size: var(--font-lg);
-  font-weight: 800;
-  color: var(--color-primary);
-}
-
-.logo-text {
-  font-size: var(--font-xl);
-  font-weight: 800;
-  color: var(--color-text);
-  letter-spacing: -0.5px;
-}
-
-.nav {
-  display: flex;
-  align-items: center;
-  gap: var(--space-4);
-}
-
-.nav-link {
-  font-size: var(--font-sm);
-  font-weight: 500;
-  color: var(--color-text-secondary);
-  padding: var(--space-2) var(--space-1);
-  position: relative;
-}
-
-.nav-link::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 50%;
-  width: 0;
-  height: 2px;
-  background: var(--color-primary);
-  transition: all var(--transition-fast);
-  transform: translateX(-50%);
-}
-
-.nav-link:hover {
-  color: var(--color-primary);
-}
-
-.nav-link:hover::after {
-  width: 100%;
-}
-
-.nav-profile {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  min-width: 0;
-  padding: 4px var(--space-2) 4px 4px;
-  border-radius: var(--radius-full);
-  transition: background-color var(--transition-fast);
-}
-
-.nav-profile:hover {
-  background-color: var(--color-primary-light);
-}
-
-.nav-avatar {
-  width: 32px;
-  height: 32px;
-  border-radius: var(--radius-full);
-  object-fit: cover;
-  border: 1px solid var(--color-border);
-  background: var(--color-surface);
-}
-
-.nav-avatar-fallback {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--color-primary-dark);
-  background: var(--color-primary-light);
-  font-size: var(--font-sm);
-  font-weight: 800;
-}
-
-.nav-user {
-  max-width: 120px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: var(--font-sm);
-  font-weight: 600;
-  color: var(--color-text);
-}
-
-/* ===== Main ===== */
-.main {
-  min-height: calc(100vh - 60px - 64px);
-}
-
-/* ===== Footer ===== */
-.footer {
-  border-top: 1px solid var(--color-border-light);
-  padding: var(--space-5) 0;
-}
-
-.footer-inner {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.footer-logo {
-  font-weight: 700;
-  color: var(--color-primary);
-  font-size: var(--font-sm);
-}
-
-.footer-copy {
-  font-size: var(--font-xs);
-  color: var(--color-text-muted);
-}
-</style>

@@ -140,21 +140,22 @@ const restoreRoute = () => ({
 
 <style scoped>
 .auth-page {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: calc(100vh - 60px - 64px);
-  padding: var(--space-8) var(--space-4);
+  display: grid;
+  place-items: center;
+  min-height: 100dvh;
+  padding: clamp(18px, 4vw, 48px);
+  background:
+    radial-gradient(circle at 1px 1px, rgba(124, 58, 237, 0.18) 1.5px, transparent 1.5px) 0 0 / 38px 38px,
+    var(--background);
 }
 
 .auth-card {
   width: 100%;
-  max-width: 420px;
-  padding: var(--space-10);
-  background: var(--color-bg);
-  border: 1px solid var(--color-border-light);
-  border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-lg);
+  max-width: 480px;
+  padding: clamp(22px, 3vw, 34px);
+  background: var(--surface-plain);
+  border: 4px solid var(--ink);
+  box-shadow: 8px 8px 0 var(--ink);
 }
 
 .auth-header {
@@ -164,13 +165,15 @@ const restoreRoute = () => ({
 
 .auth-title {
   font-size: var(--font-2xl);
-  font-weight: 800;
+  font-family: var(--font-mono);
+  font-weight: 950;
   margin-bottom: var(--space-2);
 }
 
 .auth-subtitle {
-  color: var(--color-text-muted);
+  color: var(--muted);
   font-size: var(--font-sm);
+  font-weight: 750;
 }
 
 .auth-form {
@@ -194,12 +197,13 @@ const restoreRoute = () => ({
   text-align: center;
   margin-top: var(--space-6);
   font-size: var(--font-sm);
-  color: var(--color-text-secondary);
+  color: var(--muted);
+  font-weight: 750;
 }
 
 .auth-link {
-  color: var(--color-primary);
-  font-weight: 600;
+  color: var(--primary);
+  font-weight: 950;
 }
 
 .auth-link:hover {

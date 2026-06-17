@@ -1,155 +1,463 @@
 <script setup>
+import { computed } from 'vue'
 import { RouterLink } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
+
+const auth = useAuthStore()
+
+const heroName = computed(() => auth.user?.nickname || 'Hero')
+const isAdmin = computed(() => auth.user?.role === 'ADMIN')
+
+const overviewCards = computed(() => {
+  const cards = [
+    {
+      label: 'PROBLEMS',
+      value: '문제풀기',
+      note: '공개 문제 목록',
+      tone: 'green',
+      to: '/problems',
+      icon: '◎',
+    },
+    {
+      label: 'CODE RUN',
+      value: '제출/채점',
+      note: '문제 상세에서 실행',
+      tone: 'blue',
+      to: '/problems',
+      icon: '</>',
+    },
+    {
+      label: 'BOARD',
+      value: '게시판',
+      note: '공지·질문·자유글',
+      tone: 'purple',
+      to: '/board',
+      icon: '□',
+    },
+    {
+      label: 'PROFILE',
+      value: auth.isLoggedIn ? '내 정보' : '로그인',
+      note: auth.isLoggedIn ? '회원정보 관리' : '제출 기능 활성화',
+      tone: 'gold',
+      to: auth.isLoggedIn ? '/mypage' : '/login',
+      icon: '◆',
+    },
+  ]
+
+  if (isAdmin.value) {
+    return [
+      ...cards,
+      {
+        label: 'ADMIN',
+        value: '문제 공개',
+        note: '관리자 도구',
+        tone: 'red',
+        to: '/admin/problem-publications',
+        icon: '▣',
+      },
+    ]
+  }
+
+  return cards
+})
 </script>
 
 <template>
-  <section class="hero">
-    <div class="container hero-inner">
-      <div class="hero-badge fade-in">🚀 SSAFY 코딩테스트 스터디</div>
-      <h1 class="hero-title fade-in stagger-1">
-        코딩테스트 준비,<br>
-        이제 <span class="highlight">LYL</span>과 함께.
-      </h1>
-      <p class="hero-desc fade-in stagger-2">
-        문제 풀이부터 코드 리뷰, 커뮤니티까지.<br>
-        함께 성장하는 코딩테스트 스터디 플랫폼.
-      </p>
-      <div class="hero-actions fade-in stagger-3">
-        <RouterLink to="/signup" class="btn btn-primary btn-lg">무료로 시작하기</RouterLink>
-        <RouterLink to="/board" class="btn btn-outline btn-lg">커뮤니티 둘러보기</RouterLink>
+  <div class="dashboard-page fade-in">
+    <section class="dashboard-panel player-status-panel">
+      <div class="panel-titlebar">
+        <strong>★ PLAYER STATUS</strong>
+        <span>2026.06 SERVICE</span>
       </div>
-    </div>
-  </section>
 
-  <section class="features">
-    <div class="container">
-      <div class="features-grid">
-        <div class="feature-card fade-in">
-          <div class="feature-icon">📝</div>
-          <h3 class="feature-title">문제 풀이</h3>
-          <p class="feature-desc">카테고리별로 엄선된 코딩테스트 문제를 풀고 실력을 키워보세요.</p>
+      <div class="player-summary">
+        <div class="level-box">
+          <span>LV</span>
+          <strong>{{ auth.isLoggedIn ? '12' : '?' }}</strong>
         </div>
-        <div class="feature-card fade-in stagger-1">
-          <div class="feature-icon">💻</div>
-          <h3 class="feature-title">웹 에디터</h3>
-          <p class="feature-desc">별도 설치 없이 브라우저에서 바로 코드를 작성하고 채점받으세요.</p>
+
+        <div class="player-copy">
+          <p class="eyebrow">WELCOME BACK</p>
+          <h1>{{ heroName }}</h1>
+          <p>
+            문제 풀이, 코드 제출, 게시판 기능이 준비되어 있습니다.
+            오늘의 퀘스트는 실제 서비스 화면에서 이어집니다.
+          </p>
+          <div class="xp-bar" aria-label="서비스 진행도">
+            <span />
+          </div>
         </div>
-        <div class="feature-card fade-in stagger-2">
-          <div class="feature-icon">👥</div>
-          <h3 class="feature-title">커뮤니티</h3>
-          <p class="feature-desc">질문하고, 풀이를 공유하고, 함께 성장하는 스터디 공간.</p>
-        </div>
+
+        <RouterLink :to="auth.isLoggedIn ? '/problems' : '/login'" class="btn btn-primary">
+          {{ auth.isLoggedIn ? '문제 풀러가기' : '로그인하기' }}
+        </RouterLink>
       </div>
-    </div>
-  </section>
+    </section>
+
+    <RouterLink to="/problems" class="daily-quest-card">
+      <span class="quest-icon">◎</span>
+      <span>
+        <strong>DAILY QUEST</strong>
+        <small>공개된 문제를 선택하고 브라우저에서 바로 제출하세요.</small>
+      </span>
+      <b>도전</b>
+    </RouterLink>
+
+    <section class="section-heading">
+      <strong>OVERVIEW</strong>
+      <span />
+    </section>
+
+    <section class="overview-grid" aria-label="서비스 기능">
+      <RouterLink
+        v-for="card in overviewCards"
+        :key="card.label"
+        :to="card.to"
+        class="overview-card"
+        :class="`tone-${card.tone}`"
+      >
+        <span>{{ card.label }}</span>
+        <i>{{ card.icon }}</i>
+        <strong>{{ card.value }}</strong>
+        <small>{{ card.note }}</small>
+      </RouterLink>
+    </section>
+
+    <section class="dashboard-columns">
+      <article class="dashboard-card">
+        <header>▸ 문제 풀이 플로우</header>
+        <ol>
+          <li>문제 목록에서 공개 문제를 선택합니다.</li>
+          <li>문제 상세에서 언어와 템플릿 코드를 선택합니다.</li>
+          <li>제출 후 채점 결과와 최근 제출을 확인합니다.</li>
+        </ol>
+      </article>
+
+      <article class="dashboard-card">
+        <header>▸ 커뮤니티 플로우</header>
+        <ol>
+          <li>공지, 자유, 질문 카테고리를 탐색합니다.</li>
+          <li>로그인 후 게시글을 작성하고 수정할 수 있습니다.</li>
+          <li>게시글 상세에서 내용을 확인합니다.</li>
+        </ol>
+      </article>
+    </section>
+  </div>
 </template>
 
 <style scoped>
-/* ===== Hero ===== */
-.hero {
-  padding: var(--space-16) 0 var(--space-12);
-  background: linear-gradient(180deg, var(--color-primary-light) 0%, var(--color-bg) 100%);
+.dashboard-page {
+  display: grid;
+  gap: 22px;
 }
 
-.hero-inner {
+.dashboard-panel,
+.dashboard-card,
+.daily-quest-card,
+.overview-card {
+  border: 3px solid var(--primary-line);
+  background: var(--surface-plain);
+  box-shadow: var(--pixel-shadow-muted);
+}
+
+.panel-titlebar {
   display: flex;
-  flex-direction: column;
   align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 46px;
+  padding: 12px 18px;
+  background: var(--primary);
+  color: #fff;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  font-weight: 950;
+  letter-spacing: 0.1em;
+}
+
+.panel-titlebar strong {
+  color: var(--gold);
+}
+
+.panel-titlebar span {
+  color: #ddd6fe;
+}
+
+.player-summary {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 24px;
+  padding: clamp(22px, 3vw, 38px);
+}
+
+.level-box {
+  display: grid;
+  place-items: center;
+  width: 86px;
+  height: 86px;
+  border: 4px solid var(--primary-line);
+  background: var(--primary);
+  box-shadow: 5px 5px 0 var(--primary-shadow);
+  color: #fff;
+  font-family: var(--font-mono);
+  line-height: 1;
+}
+
+.level-box span {
+  color: var(--gold);
+  font-size: 0.7rem;
+  font-weight: 950;
+}
+
+.level-box strong {
+  font-size: 2rem;
+  font-weight: 950;
+}
+
+.player-copy {
+  min-width: 0;
+}
+
+.eyebrow {
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+}
+
+.player-copy h1 {
+  margin: 2px 0 8px;
+  color: var(--ink);
+  font-size: clamp(1.7rem, 3vw, 2.8rem);
+  font-weight: 950;
+  letter-spacing: -0.02em;
+}
+
+.player-copy p:not(.eyebrow) {
+  color: var(--muted);
+  font-weight: 750;
+}
+
+.xp-bar {
+  height: 18px;
+  margin-top: 16px;
+  border: 4px solid var(--primary-dark);
+  background: var(--primary-soft);
+}
+
+.xp-bar span {
+  display: block;
+  width: 72%;
+  height: 100%;
+  background: linear-gradient(90deg, var(--primary), var(--cyan));
+}
+
+.daily-quest-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 18px;
+  padding: 20px 24px;
+  border-color: var(--green);
+  box-shadow: 5px 5px 0 var(--green-dark);
+}
+
+.daily-quest-card:hover {
+  transform: translate(-2px, -2px);
+}
+
+.quest-icon {
+  display: grid;
+  place-items: center;
+  width: 58px;
+  height: 58px;
+  background: var(--green);
+  box-shadow: 4px 4px 0 var(--green-dark);
+  color: #fff;
+  font-family: var(--font-mono);
+  font-size: 1.6rem;
+  font-weight: 950;
+}
+
+.daily-quest-card strong,
+.daily-quest-card small {
+  display: block;
+}
+
+.daily-quest-card strong {
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: 1.2rem;
+  font-weight: 950;
+}
+
+.daily-quest-card small {
+  margin-top: 4px;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-weight: 750;
+}
+
+.daily-quest-card b {
+  min-width: 94px;
+  padding: 12px 16px;
+  background: var(--green);
+  box-shadow: 4px 4px 0 var(--green-dark);
+  color: #fff;
+  font-family: var(--font-mono);
+  font-size: 1.08rem;
+  font-weight: 950;
   text-align: center;
 }
 
-.hero-badge {
-  display: inline-block;
-  padding: var(--space-1) var(--space-4);
-  background: var(--color-bg);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-full);
-  font-size: var(--font-sm);
-  font-weight: 600;
-  color: var(--color-primary-dark);
-  margin-bottom: var(--space-8);
-  box-shadow: var(--shadow-xs);
-}
-
-.hero-title {
-  font-size: var(--font-5xl);
-  font-weight: 800;
-  line-height: 1.15;
-  letter-spacing: -1.5px;
-  margin-bottom: var(--space-6);
-  color: var(--color-text);
-}
-
-.highlight {
-  color: var(--color-primary);
-  position: relative;
-}
-
-.hero-desc {
-  font-size: var(--font-lg);
-  color: var(--color-text-secondary);
-  line-height: 1.7;
-  margin-bottom: var(--space-10);
-  max-width: 480px;
-}
-
-.hero-actions {
-  display: flex;
-  gap: var(--space-4);
-}
-
-/* ===== Features ===== */
-.features {
-  padding: var(--space-16) 0;
-}
-
-.features-grid {
+.section-heading {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: var(--space-6);
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 14px;
+  color: var(--primary-dark);
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  font-weight: 950;
+  letter-spacing: 0.16em;
 }
 
-.feature-card {
-  padding: var(--space-8);
-  border: 1px solid var(--color-border-light);
-  border-radius: var(--radius-xl);
-  background: var(--color-bg);
-  transition: all var(--transition-base);
+.section-heading::before {
+  width: 6px;
+  height: 26px;
+  background: var(--primary);
+  content: "";
 }
 
-.feature-card:hover {
-  border-color: var(--color-primary);
-  box-shadow: var(--shadow-lg);
-  transform: translateY(-4px);
+.section-heading span {
+  height: 3px;
+  background: var(--line-soft);
 }
 
-.feature-icon {
-  font-size: 2rem;
-  margin-bottom: var(--space-4);
+.overview-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
 }
 
-.feature-title {
-  font-size: var(--font-lg);
-  font-weight: 700;
-  margin-bottom: var(--space-2);
+.overview-card {
+  display: grid;
+  min-height: 150px;
+  padding: 18px;
+  transition:
+    transform var(--transition-fast),
+    box-shadow var(--transition-fast);
 }
 
-.feature-desc {
-  font-size: var(--font-sm);
-  color: var(--color-text-secondary);
-  line-height: 1.6;
+.overview-card:hover {
+  transform: translate(-2px, -2px);
 }
 
-@media (max-width: 768px) {
-  .hero-title {
-    font-size: var(--font-3xl);
+.overview-card span,
+.overview-card small {
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-weight: 850;
+}
+
+.overview-card span {
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+}
+
+.overview-card i {
+  justify-self: end;
+  color: currentColor;
+  font-family: var(--font-mono);
+  font-style: normal;
+  font-weight: 950;
+}
+
+.overview-card strong {
+  align-self: end;
+  color: currentColor;
+  font-family: var(--font-mono);
+  font-size: clamp(1.3rem, 2vw, 1.8rem);
+  font-weight: 950;
+}
+
+.overview-card.tone-green {
+  color: var(--green);
+  box-shadow: 5px 5px 0 var(--green-dark);
+}
+
+.overview-card.tone-blue {
+  color: var(--blue);
+  box-shadow: 5px 5px 0 #1d4ed8;
+}
+
+.overview-card.tone-purple {
+  color: var(--primary);
+  box-shadow: 5px 5px 0 var(--primary-shadow);
+}
+
+.overview-card.tone-gold {
+  color: var(--gold);
+  box-shadow: 5px 5px 0 var(--gold-dark);
+}
+
+.overview-card.tone-red {
+  color: var(--red);
+  box-shadow: 5px 5px 0 var(--red-dark);
+}
+
+.dashboard-columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.dashboard-card header {
+  padding: 12px 18px;
+  background: var(--primary);
+  color: #fff;
+  font-family: var(--font-mono);
+  font-weight: 950;
+}
+
+.dashboard-card ol {
+  display: grid;
+  gap: 12px;
+  padding: 20px 20px 20px 42px;
+  color: var(--muted);
+  font-weight: 760;
+}
+
+@media (max-width: 1120px) {
+  .overview-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-  .features-grid {
+
+  .player-summary {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .player-summary .btn {
+    grid-column: 1 / -1;
+    justify-self: start;
+  }
+}
+
+@media (max-width: 720px) {
+  .overview-grid,
+  .dashboard-columns {
     grid-template-columns: 1fr;
   }
-  .hero-actions {
-    flex-direction: column;
-    width: 100%;
+
+  .player-summary,
+  .daily-quest-card {
+    grid-template-columns: 1fr;
+  }
+
+  .daily-quest-card b {
+    justify-self: start;
   }
 }
 </style>
