@@ -50,6 +50,13 @@ const router = createRouter({
       props: true,
     },
     {
+      path: '/problems/:problemId/submissions',
+      name: 'problem-submissions',
+      component: () => import('@/views/ProblemSubmissionsView.vue'),
+      props: true,
+      meta: { requiresAuth: true },
+    },
+    {
       path: '/admin/problem-publications',
       name: 'admin-problem-publications',
       component: () => import('@/views/AdminProblemPublicationsView.vue'),

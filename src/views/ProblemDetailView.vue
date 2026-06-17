@@ -3,6 +3,7 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { fetchProblem } from '@/api/problems'
 import { createSubmission, fetchProblemSubmissions, fetchSubmission } from '@/api/submissions'
+import MonacoCodeEditor from '@/components/MonacoCodeEditor.vue'
 import { useAuthStore } from '@/stores/auth'
 
 const route = useRoute()
@@ -30,10 +31,8 @@ const languageOptions = [
 
 const codeTemplates = {
   PYTHON3: 'a, b = map(int, input().split())\nprint(a + b)\n',
-  JAVA:
-    'import java.io.*;\nimport java.util.*;\n\npublic class Main {\n    public static void main(String[] args) throws Exception {\n        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));\n        StringTokenizer st = new StringTokenizer(br.readLine());\n        int a = Integer.parseInt(st.nextToken());\n        int b = Integer.parseInt(st.nextToken());\n        System.out.println(a + b);\n    }\n}\n',
-  CPP:
-    '#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n    ios::sync_with_stdio(false);\n    cin.tie(nullptr);\n\n    int a, b;\n    cin >> a >> b;\n    cout << a + b << \'\\n\';\n    return 0;\n}\n',
+  JAVA: 'import java.io.*;\nimport java.util.*;\n\npublic class Main {\n    public static void main(String[] args) throws Exception {\n        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));\n        StringTokenizer st = new StringTokenizer(br.readLine());\n        int a = Integer.parseInt(st.nextToken());\n        int b = Integer.parseInt(st.nextToken());\n        System.out.println(a + b);\n    }\n}\n',
+  CPP: "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n    ios::sync_with_stdio(false);\n    cin.tie(nullptr);\n\n    int a, b;\n    cin >> a >> b;\n    cout << a + b << '\\n';\n    return 0;\n}\n",
 }
 
 const problemId = computed(() => route.params.problemId)
@@ -104,9 +103,14 @@ const isInProgress = (status) => status === 'PENDING' || status === 'JUDGING'
 
 const formatUsage = (submission) => {
   if (!submission) return '-'
-  const time = submission.maxTimeMs === null || submission.maxTimeMs === undefined ? '-' : `${submission.maxTimeMs}ms`
+  const time =
+    submission.maxTimeMs === null || submission.maxTimeMs === undefined
+      ? '-'
+      : `${submission.maxTimeMs}ms`
   const memory =
-    submission.maxMemoryKb === null || submission.maxMemoryKb === undefined ? '-' : `${submission.maxMemoryKb}KB`
+    submission.maxMemoryKb === null || submission.maxMemoryKb === undefined
+      ? '-'
+      : `${submission.maxMemoryKb}KB`
   return `${time} / ${memory}`
 }
 
@@ -348,17 +352,21 @@ watch(
                 {{ language.label }}
               </button>
             </div>
-            <button type="button" class="btn btn-ghost btn-sm" @click="resetTemplate">초기화</button>
+            <div class="editor-tools">
+              <RouterLink
+                v-if="auth.isLoggedIn"
+                :to="{ name: 'problem-submissions', params: { problemId } }"
+                class="btn btn-outline btn-sm"
+              >
+                제출 목록
+              </RouterLink>
+              <button type="button" class="btn btn-ghost btn-sm" @click="resetTemplate">
+                초기화
+              </button>
+            </div>
           </div>
 
-          <textarea
-            v-model="sourceCode"
-            class="code-editor"
-            spellcheck="false"
-            autocomplete="off"
-            autocapitalize="off"
-            rows="20"
-          ></textarea>
+          <MonacoCodeEditor v-model="sourceCode" :language="selectedLanguage" />
 
           <div v-if="submissionError" class="submit-message error-message">
             {{ submissionError }}
@@ -388,7 +396,9 @@ watch(
               <dl class="result-grid">
                 <div>
                   <dt>통과</dt>
-                  <dd>{{ latestSubmission.passedTestCount }} / {{ latestSubmission.totalTestCount }}</dd>
+                  <dd>
+                    {{ latestSubmission.passedTestCount }} / {{ latestSubmission.totalTestCount }}
+                  </dd>
                 </div>
                 <div>
                   <dt>시간 / 메모리</dt>
@@ -445,7 +455,13 @@ watch(
 <style scoped>
 .problem-detail {
   min-height: calc(100vh - 72px);
-  background: linear-gradient(90deg, var(--color-bg) 0%, var(--color-bg) 50%, var(--color-surface) 50%, var(--color-surface) 100%);
+  background: linear-gradient(
+    90deg,
+    var(--color-bg) 0%,
+    var(--color-bg) 50%,
+    var(--color-surface) 50%,
+    var(--color-surface) 100%
+  );
 }
 
 .detail-container {
@@ -627,6 +643,12 @@ watch(
   gap: var(--space-3);
 }
 
+.editor-tools {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
 .language-tabs {
   display: inline-flex;
   overflow: hidden;
@@ -650,28 +672,6 @@ watch(
 .language-tab.active {
   background: var(--color-primary);
   color: #fff;
-}
-
-.code-editor {
-  width: 100%;
-  min-height: 480px;
-  resize: vertical;
-  padding: var(--space-4);
-  border: 1px solid #1f2937;
-  border-radius: var(--radius-md);
-  outline: none;
-  background: #0f172a;
-  color: #e5e7eb;
-  box-shadow: var(--shadow-sm);
-  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
-  font-size: var(--font-sm);
-  line-height: 1.65;
-  tab-size: 4;
-}
-
-.code-editor:focus {
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgba(32, 201, 151, 0.16);
 }
 
 .submit-actions {
@@ -837,8 +837,11 @@ watch(
     min-width: 0;
   }
 
-  .code-editor {
-    min-height: 380px;
+  .editor-toolbar,
+  .editor-tools {
+    align-items: stretch;
+    flex-direction: column;
+    width: 100%;
   }
 }
 </style>
