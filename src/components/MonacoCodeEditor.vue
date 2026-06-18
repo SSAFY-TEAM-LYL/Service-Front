@@ -116,15 +116,15 @@ watch(
   width: 100%;
   min-height: 480px;
   overflow: hidden;
-  border: 1px solid #1f2937;
+  border: 4px solid var(--ink);
   border-radius: var(--radius-md);
   background: #1e1e1e;
-  box-shadow: var(--shadow-sm);
+  box-shadow: 5px 5px 0 var(--primary-shadow);
 }
 
 .monaco-code-editor:focus-within {
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgba(32, 201, 151, 0.16);
+  box-shadow: 5px 5px 0 var(--primary-shadow);
 }
 
 @media (max-width: 860px) {

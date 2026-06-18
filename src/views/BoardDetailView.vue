@@ -450,13 +450,25 @@ const removeComment = async (comment) => {
 <style scoped>
 .detail-page {
   max-width: 760px;
-  padding: var(--space-10) var(--space-6);
+  padding: 0;
+}
+
+.detail-article,
+.detail-empty,
+.detail-loading {
+  border: 3px solid var(--color-border);
+  background: var(--color-bg);
+  box-shadow: var(--shadow-md);
+}
+
+.detail-article {
+  padding: var(--space-6);
 }
 
 .detail-loading,
 .detail-empty {
   text-align: center;
-  padding: var(--space-16) 0;
+  padding: var(--space-16) var(--space-6);
   color: var(--color-text-muted);
 }
 
@@ -483,7 +495,7 @@ const removeComment = async (comment) => {
 
 .detail-header {
   padding-bottom: var(--space-6);
-  border-bottom: 1px solid var(--color-border-light);
+  border-bottom: 3px solid var(--color-border-light);
   margin-bottom: var(--space-8);
 }
 
@@ -501,7 +513,8 @@ const removeComment = async (comment) => {
 
 .detail-title {
   font-size: var(--font-2xl);
-  font-weight: 800;
+  font-family: var(--font-mono);
+  font-weight: 950;
   line-height: 1.3;
   margin-bottom: var(--space-3);
   overflow-wrap: anywhere;
@@ -515,11 +528,13 @@ const removeComment = async (comment) => {
   height: 24px;
   margin-bottom: var(--space-3);
   padding: 0 var(--space-2);
+  border: 2px solid currentColor;
   border-radius: var(--radius-sm);
   background: var(--color-bg-secondary);
   color: var(--color-text-secondary);
   font-size: var(--font-xs);
-  font-weight: 800;
+  font-family: var(--font-mono);
+  font-weight: 900;
 }
 
 .category-badge.notice {
@@ -542,8 +557,9 @@ const removeComment = async (comment) => {
 .comment-form textarea,
 .comment-edit-input {
   width: 100%;
-  border: 1.5px solid var(--color-border);
+  border: 3px solid var(--color-border);
   border-radius: var(--radius-md);
+  background: var(--color-surface);
   color: var(--color-text);
   outline: none;
   transition: all var(--transition-fast);
@@ -569,7 +585,7 @@ const removeComment = async (comment) => {
 .comment-form textarea:focus,
 .comment-edit-input:focus {
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgba(32, 201, 151, 0.12);
+  box-shadow: 4px 4px 0 var(--color-border-light);
 }
 
 .detail-meta {
@@ -616,7 +632,7 @@ const removeComment = async (comment) => {
 .comments-section {
   margin-top: var(--space-12);
   padding-top: var(--space-6);
-  border-top: 1px solid var(--color-border-light);
+  border-top: 3px solid var(--color-border-light);
 }
 
 .comments-header {
@@ -628,7 +644,8 @@ const removeComment = async (comment) => {
 
 .comments-header h2 {
   font-size: var(--font-lg);
-  font-weight: 800;
+  font-family: var(--font-mono);
+  font-weight: 950;
 }
 
 .comments-header span {
@@ -664,12 +681,12 @@ const removeComment = async (comment) => {
 
 .comment-list {
   list-style: none;
-  border-top: 1px solid var(--color-border-light);
+  border-top: 3px solid var(--color-border-light);
 }
 
 .comment-item {
   padding: var(--space-5) 0;
-  border-bottom: 1px solid var(--color-border-light);
+  border-bottom: 2px solid var(--color-border-light);
 }
 
 .comment-meta {
@@ -740,7 +757,7 @@ const removeComment = async (comment) => {
 .detail-footer {
   margin-top: var(--space-10);
   padding-top: var(--space-6);
-  border-top: 1px solid var(--color-border-light);
+  border-top: 3px solid var(--color-border-light);
   display: flex;
   justify-content: center;
 }

@@ -198,8 +198,8 @@ watch(
 
 <style scoped>
 .board-page {
-  padding: var(--space-10) var(--space-6);
-  max-width: 860px;
+  padding: 0;
+  max-width: 1180px;
 }
 
 .board-top {
@@ -212,7 +212,8 @@ watch(
 
 .board-title {
   font-size: var(--font-2xl);
-  font-weight: 800;
+  font-family: var(--font-mono);
+  font-weight: 950;
   margin-bottom: var(--space-1);
 }
 
@@ -231,12 +232,13 @@ watch(
 .category-tab {
   min-width: 72px;
   padding: var(--space-2) var(--space-4);
-  border: 1px solid var(--color-border);
+  border: 3px solid var(--color-border);
   border-radius: var(--radius-sm);
   color: var(--color-text-secondary);
   background: var(--color-bg);
   font-size: var(--font-sm);
-  font-weight: 700;
+  font-family: var(--font-mono);
+  font-weight: 900;
   transition: all var(--transition-fast);
 }
 
@@ -255,7 +257,9 @@ watch(
 
 /* ===== Table ===== */
 .board-table {
-  border-top: 2px solid var(--color-text);
+  border: 3px solid var(--color-border);
+  background: var(--color-bg);
+  box-shadow: var(--shadow-md);
 }
 
 .table-header {
@@ -263,19 +267,20 @@ watch(
   align-items: center;
   padding: var(--space-3) var(--space-4);
   font-size: var(--font-xs);
-  font-weight: 600;
-  color: var(--color-text-secondary);
+  font-family: var(--font-mono);
+  font-weight: 950;
+  color: #fff;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
-  background: var(--color-bg-secondary);
-  border-bottom: 1px solid var(--color-border);
+  letter-spacing: 0.08em;
+  background: var(--color-primary);
+  border-bottom: 3px solid var(--color-primary-dark);
 }
 
 .table-row {
   display: flex;
   align-items: center;
   padding: var(--space-4);
-  border-bottom: 1px solid var(--color-border-light);
+  border-bottom: 2px solid var(--color-border-light);
   transition: background-color var(--transition-fast);
   cursor: pointer;
 }
@@ -323,11 +328,13 @@ watch(
   min-width: 44px;
   height: 24px;
   padding: 0 var(--space-2);
+  border: 2px solid currentColor;
   border-radius: var(--radius-sm);
   background: var(--color-bg-secondary);
   color: var(--color-text-secondary);
   font-size: var(--font-xs);
-  font-weight: 800;
+  font-family: var(--font-mono);
+  font-weight: 900;
 }
 
 .category-badge.notice {
@@ -386,8 +393,9 @@ watch(
   text-align: center;
   padding: var(--space-16) 0;
   color: var(--color-text-muted);
-  border-top: 2px solid var(--color-text);
-  border-bottom: 1px solid var(--color-border-light);
+  border: 3px solid var(--color-border);
+  background: var(--color-bg);
+  box-shadow: var(--shadow-md);
 }
 
 .board-empty p {
@@ -407,12 +415,13 @@ watch(
   min-width: 42px;
   height: 36px;
   padding: 0 var(--space-3);
-  border: 1px solid var(--color-border);
+  border: 3px solid var(--color-border);
   border-radius: var(--radius-sm);
   background: var(--color-bg);
   color: var(--color-text-secondary);
   font-size: var(--font-sm);
-  font-weight: 700;
+  font-family: var(--font-mono);
+  font-weight: 900;
   transition: all var(--transition-fast);
 }
 

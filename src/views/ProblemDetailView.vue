@@ -454,19 +454,12 @@ watch(
 
 <style scoped>
 .problem-detail {
-  min-height: calc(100vh - 72px);
-  background: linear-gradient(
-    90deg,
-    var(--color-bg) 0%,
-    var(--color-bg) 50%,
-    var(--color-surface) 50%,
-    var(--color-surface) 100%
-  );
+  min-height: 100%;
+  background: transparent;
 }
 
 .detail-container {
-  padding-top: var(--space-8);
-  padding-bottom: var(--space-12);
+  padding: 0;
   max-width: 1440px;
 }
 
@@ -491,11 +484,11 @@ watch(
 
 .statement {
   min-width: 0;
-  padding: var(--space-8);
-  border: 1px solid var(--color-border-light);
+  padding: var(--space-6);
+  border: 3px solid var(--color-border);
   border-radius: var(--radius-md);
   background: var(--color-bg);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--shadow-md);
 }
 
 .statement-header {
@@ -503,7 +496,7 @@ watch(
   justify-content: space-between;
   gap: var(--space-6);
   padding-bottom: var(--space-6);
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: 3px solid var(--color-border);
 }
 
 .problem-id {
@@ -516,7 +509,8 @@ watch(
 
 .statement h1 {
   font-size: var(--font-3xl);
-  font-weight: 800;
+  font-family: var(--font-mono);
+  font-weight: 950;
   line-height: 1.25;
 }
 
@@ -526,7 +520,7 @@ watch(
 
 .meta-list div {
   padding: var(--space-3);
-  border: 1px solid var(--color-border);
+  border: 3px solid var(--color-border);
   border-radius: var(--radius-sm);
   background: var(--color-surface);
 }
@@ -545,7 +539,7 @@ watch(
 
 .statement-section {
   padding: var(--space-7) 0;
-  border-bottom: 1px solid var(--color-border-light);
+  border-bottom: 2px solid var(--color-border-light);
 }
 
 .statement-section:last-child {
@@ -556,7 +550,8 @@ watch(
 .statement-section h2 {
   margin-bottom: var(--space-3);
   font-size: var(--font-lg);
-  font-weight: 800;
+  font-family: var(--font-mono);
+  font-weight: 950;
 }
 
 .pre-line {
@@ -601,7 +596,7 @@ watch(
 .judge-message {
   overflow: auto;
   padding: var(--space-4);
-  border: 1px solid var(--color-border);
+  border: 3px solid var(--ink);
   border-radius: var(--radius-sm);
   background: #111827;
   color: #f9fafb;
@@ -620,9 +615,10 @@ watch(
   gap: var(--space-4);
   max-width: 760px;
   padding: var(--space-16) var(--space-6);
-  border: 1px solid var(--color-border-light);
+  border: 3px solid var(--color-border);
   border-radius: var(--radius-md);
   background: var(--color-bg);
+  box-shadow: var(--shadow-md);
   color: var(--color-text-secondary);
 }
 
@@ -652,7 +648,7 @@ watch(
 .language-tabs {
   display: inline-flex;
   overflow: hidden;
-  border: 1px solid var(--color-border);
+  border: 3px solid var(--color-border);
   border-radius: var(--radius-md);
   background: var(--color-bg);
 }
@@ -662,11 +658,12 @@ watch(
   padding: var(--space-2) var(--space-3);
   color: var(--color-text-secondary);
   font-size: var(--font-sm);
-  font-weight: 800;
+  font-family: var(--font-mono);
+  font-weight: 900;
 }
 
 .language-tab + .language-tab {
-  border-left: 1px solid var(--color-border);
+  border-left: 3px solid var(--color-border);
 }
 
 .language-tab.active {
@@ -676,9 +673,10 @@ watch(
 
 .submit-actions {
   padding: var(--space-4);
-  border: 1px solid var(--color-border-light);
+  border: 3px solid var(--color-border);
   border-radius: var(--radius-md);
   background: var(--color-bg);
+  box-shadow: var(--shadow-xs);
 }
 
 .submit-actions .btn:disabled {
@@ -695,7 +693,7 @@ watch(
 }
 
 .error-message {
-  border: 1px solid #fecaca;
+  border: 3px solid #fecaca;
   background: var(--color-error-light);
   color: var(--color-error);
 }
@@ -705,15 +703,16 @@ watch(
   display: grid;
   gap: var(--space-4);
   padding: var(--space-5);
-  border: 1px solid var(--color-border-light);
+  border: 3px solid var(--color-border);
   border-radius: var(--radius-md);
   background: var(--color-bg);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--shadow-md);
 }
 
 .result-header h2 {
   font-size: var(--font-lg);
-  font-weight: 800;
+  font-family: var(--font-mono);
+  font-weight: 950;
 }
 
 .status-badge {
@@ -750,7 +749,7 @@ watch(
 
 .result-grid div {
   padding: var(--space-3);
-  border: 1px solid var(--color-border-light);
+  border: 2px solid var(--color-border-light);
   border-radius: var(--radius-sm);
   background: var(--color-surface);
 }
@@ -779,7 +778,7 @@ watch(
   align-items: center;
   gap: var(--space-2);
   padding: var(--space-2) 0;
-  border-bottom: 1px solid var(--color-border-light);
+  border-bottom: 2px solid var(--color-border-light);
   color: var(--color-text-secondary);
   font-size: var(--font-xs);
   font-weight: 700;

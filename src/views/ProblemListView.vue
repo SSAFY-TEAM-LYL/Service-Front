@@ -141,8 +141,8 @@ onMounted(loadProblems)
 
 <style scoped>
 .problem-page {
-  padding: var(--space-10) var(--space-6);
-  max-width: 960px;
+  padding: 0;
+  max-width: 1180px;
 }
 
 .problem-top {
@@ -155,7 +155,8 @@ onMounted(loadProblems)
 
 .problem-title {
   font-size: var(--font-2xl);
-  font-weight: 800;
+  font-family: var(--font-mono);
+  font-weight: 950;
   margin-bottom: var(--space-1);
 }
 
@@ -165,7 +166,9 @@ onMounted(loadProblems)
 }
 
 .problem-table {
-  border-top: 2px solid var(--color-text);
+  border: 3px solid var(--color-border);
+  background: var(--color-bg);
+  box-shadow: var(--shadow-md);
 }
 
 .table-header,
@@ -176,14 +179,15 @@ onMounted(loadProblems)
   gap: var(--space-3);
   min-height: 52px;
   padding: 0 var(--space-3);
-  border-bottom: 1px solid var(--color-border-light);
+  border-bottom: 2px solid var(--color-border-light);
 }
 
 .table-header {
   font-size: var(--font-xs);
-  font-weight: 800;
-  color: var(--color-text-secondary);
-  background: var(--color-surface);
+  font-family: var(--font-mono);
+  font-weight: 950;
+  color: #fff;
+  background: var(--color-primary);
 }
 
 .table-row {
@@ -224,8 +228,9 @@ onMounted(loadProblems)
   justify-items: center;
   gap: var(--space-4);
   padding: var(--space-16) var(--space-6);
-  border-top: 2px solid var(--color-text);
-  border-bottom: 1px solid var(--color-border-light);
+  border: 3px solid var(--color-border);
+  background: var(--color-bg);
+  box-shadow: var(--shadow-md);
   color: var(--color-text-secondary);
 }
 
@@ -240,12 +245,13 @@ onMounted(loadProblems)
   min-width: 36px;
   height: 36px;
   padding: 0 var(--space-3);
-  border: 1px solid var(--color-border);
+  border: 3px solid var(--color-border);
   border-radius: var(--radius-sm);
   color: var(--color-text-secondary);
   background: var(--color-bg);
   font-size: var(--font-sm);
-  font-weight: 700;
+  font-family: var(--font-mono);
+  font-weight: 900;
 }
 
 .page-button:hover:not(:disabled),
