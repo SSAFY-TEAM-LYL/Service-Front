@@ -236,8 +236,8 @@ onBeforeUnmount(() => {
 .login-screen {
   --login-accent: var(--theme-login-accent, #15803d);
   --login-left-bg: var(--theme-login-left-bg, var(--panel-deep));
-  --login-stage-bg: var(--theme-login-stage-bg, #f4f0ea);
-  --login-grid-dot: var(--theme-login-grid-dot, rgba(124, 58, 237, 0.18));
+  --login-stage-bg: var(--theme-login-stage-bg, #fbfbfd);
+  --login-grid-dot: var(--theme-login-grid-dot, rgba(76, 29, 149, 0.07));
   --login-frame: var(--theme-login-frame, var(--ink));
   --login-window-bg: var(--theme-login-window-bg, var(--surface-plain));
   --login-window-title-bg: var(--theme-login-window-title-bg, var(--login-frame));
