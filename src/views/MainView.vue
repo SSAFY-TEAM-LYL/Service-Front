@@ -81,7 +81,7 @@ const overviewCards = computed(() => {
           <h1>{{ heroName }}</h1>
           <p>
             문제 풀이, 코드 제출, 게시판 기능이 준비되어 있습니다.
-            오늘의 퀘스트는 실제 서비스 화면에서 이어집니다.
+            학습 흐름은 문제 풀이와 제출 화면에서 이어집니다.
           </p>
           <div class="xp-bar" aria-label="서비스 진행도">
             <span />
@@ -93,15 +93,6 @@ const overviewCards = computed(() => {
         </RouterLink>
       </div>
     </section>
-
-    <RouterLink to="/problems" class="daily-quest-card">
-      <span class="quest-icon">◎</span>
-      <span>
-        <strong>DAILY QUEST</strong>
-        <small>공개된 문제를 선택하고 브라우저에서 바로 제출하세요.</small>
-      </span>
-      <b>도전</b>
-    </RouterLink>
 
     <section class="section-heading">
       <strong>OVERVIEW</strong>
@@ -153,7 +144,6 @@ const overviewCards = computed(() => {
 
 .dashboard-panel,
 .dashboard-card,
-.daily-quest-card,
 .overview-card {
   border: 3px solid var(--primary-line);
   background: var(--surface-plain);
@@ -167,8 +157,8 @@ const overviewCards = computed(() => {
   gap: 16px;
   min-height: 46px;
   padding: 12px 18px;
-  background: var(--primary);
-  color: #fff;
+  background: var(--dashboard-titlebar-bg, var(--primary));
+  color: var(--dashboard-titlebar-text, #fff);
   font-family: var(--font-mono);
   font-size: 0.78rem;
   font-weight: 950;
@@ -176,11 +166,11 @@ const overviewCards = computed(() => {
 }
 
 .panel-titlebar strong {
-  color: var(--gold);
+  color: var(--dashboard-title-highlight, var(--gold));
 }
 
 .panel-titlebar span {
-  color: #ddd6fe;
+  color: var(--dashboard-title-meta, #ddd6fe);
 }
 
 .player-summary {
@@ -189,6 +179,7 @@ const overviewCards = computed(() => {
   align-items: center;
   gap: 24px;
   padding: clamp(22px, 3vw, 38px);
+  background: var(--dashboard-hero-bg, transparent);
 }
 
 .level-box {
@@ -196,16 +187,16 @@ const overviewCards = computed(() => {
   place-items: center;
   width: 86px;
   height: 86px;
-  border: 4px solid var(--primary-line);
-  background: var(--primary);
-  box-shadow: 5px 5px 0 var(--primary-shadow);
-  color: #fff;
+  border: 4px solid var(--dashboard-level-border, var(--primary-line));
+  background: var(--dashboard-level-bg, var(--primary));
+  box-shadow: 5px 5px 0 var(--dashboard-level-shadow, var(--primary-shadow));
+  color: var(--dashboard-level-text, #fff);
   font-family: var(--font-mono);
   line-height: 1;
 }
 
 .level-box span {
-  color: var(--gold);
+  color: var(--dashboard-level-label, var(--gold));
   font-size: 0.7rem;
   font-weight: 950;
 }
@@ -243,73 +234,26 @@ const overviewCards = computed(() => {
 .xp-bar {
   height: 18px;
   margin-top: 16px;
-  border: 4px solid var(--primary-dark);
-  background: var(--primary-soft);
+  border: 4px solid var(--dashboard-xp-border, var(--primary-dark));
+  background: var(--dashboard-xp-track, var(--primary-soft));
 }
 
 .xp-bar span {
   display: block;
   width: 72%;
   height: 100%;
-  background: linear-gradient(90deg, var(--primary), var(--cyan));
+  background: linear-gradient(
+    90deg,
+    var(--dashboard-xp-fill, var(--primary)),
+    var(--dashboard-xp-fill-end, var(--cyan))
+  );
 }
 
-.daily-quest-card {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 18px;
-  padding: 20px 24px;
-  border-color: var(--green);
-  box-shadow: 5px 5px 0 var(--green-dark);
-}
-
-.daily-quest-card:hover {
-  transform: translate(-2px, -2px);
-}
-
-.quest-icon {
-  display: grid;
-  place-items: center;
-  width: 58px;
-  height: 58px;
-  background: var(--green);
-  box-shadow: 4px 4px 0 var(--green-dark);
-  color: #fff;
-  font-family: var(--font-mono);
-  font-size: 1.6rem;
-  font-weight: 950;
-}
-
-.daily-quest-card strong,
-.daily-quest-card small {
-  display: block;
-}
-
-.daily-quest-card strong {
-  color: var(--ink);
-  font-family: var(--font-mono);
-  font-size: 1.2rem;
-  font-weight: 950;
-}
-
-.daily-quest-card small {
-  margin-top: 4px;
-  color: var(--muted);
-  font-family: var(--font-mono);
-  font-weight: 750;
-}
-
-.daily-quest-card b {
-  min-width: 94px;
-  padding: 12px 16px;
-  background: var(--green);
-  box-shadow: 4px 4px 0 var(--green-dark);
-  color: #fff;
-  font-family: var(--font-mono);
-  font-size: 1.08rem;
-  font-weight: 950;
-  text-align: center;
+.player-summary .btn-primary {
+  border-color: var(--dashboard-action-bg, var(--primary));
+  background: var(--dashboard-action-bg, var(--primary));
+  box-shadow: 5px 5px 0 var(--dashboard-action-shadow, var(--primary-shadow));
+  color: var(--dashboard-action-text, #fff);
 }
 
 .section-heading {
@@ -384,28 +328,33 @@ const overviewCards = computed(() => {
 }
 
 .overview-card.tone-green {
-  color: var(--green);
-  box-shadow: 5px 5px 0 var(--green-dark);
+  border-color: var(--overview-green-border, color-mix(in srgb, var(--green) 45%, var(--primary-line)));
+  color: var(--overview-green, var(--green));
+  box-shadow: 5px 5px 0 var(--overview-green-shadow, var(--green-dark));
 }
 
 .overview-card.tone-blue {
-  color: var(--blue);
-  box-shadow: 5px 5px 0 #1d4ed8;
+  border-color: var(--overview-blue-border, color-mix(in srgb, var(--blue) 45%, var(--primary-line)));
+  color: var(--overview-blue, var(--blue));
+  box-shadow: 5px 5px 0 var(--overview-blue-shadow, #1d4ed8);
 }
 
 .overview-card.tone-purple {
-  color: var(--primary);
-  box-shadow: 5px 5px 0 var(--primary-shadow);
+  border-color: var(--overview-purple-border, color-mix(in srgb, var(--primary) 45%, var(--primary-line)));
+  color: var(--overview-purple, var(--primary));
+  box-shadow: 5px 5px 0 var(--overview-purple-shadow, var(--primary-shadow));
 }
 
 .overview-card.tone-gold {
-  color: var(--gold);
-  box-shadow: 5px 5px 0 var(--gold-dark);
+  border-color: var(--overview-gold-border, color-mix(in srgb, var(--gold) 45%, var(--primary-line)));
+  color: var(--overview-gold, var(--gold));
+  box-shadow: 5px 5px 0 var(--overview-gold-shadow, var(--gold-dark));
 }
 
 .overview-card.tone-red {
-  color: var(--red);
-  box-shadow: 5px 5px 0 var(--red-dark);
+  border-color: var(--overview-red-border, color-mix(in srgb, var(--red) 45%, var(--primary-line)));
+  color: var(--overview-red, var(--red));
+  box-shadow: 5px 5px 0 var(--overview-red-shadow, var(--red-dark));
 }
 
 .dashboard-columns {
@@ -451,13 +400,8 @@ const overviewCards = computed(() => {
     grid-template-columns: 1fr;
   }
 
-  .player-summary,
-  .daily-quest-card {
+  .player-summary {
     grid-template-columns: 1fr;
-  }
-
-  .daily-quest-card b {
-    justify-self: start;
   }
 }
 </style>

@@ -20,8 +20,8 @@ const showPassword = ref(false)
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api'
 
 const leftStats = [
-  { label: 'OPEN PROBLEMS', value: 12, tone: 'green' },
-  { label: 'CODE RUNNERS', value: 3, tone: 'purple' },
+  { label: 'AI PROBLEMS READY', value: 12, tone: 'green' },
+  { label: 'CODE RUNS TODAY', value: 3, tone: 'purple' },
   { label: 'BOARD THREADS', value: 28, tone: 'gold' },
 ]
 const displayedStats = ref(leftStats.map(() => 0))
@@ -114,26 +114,29 @@ onBeforeUnmount(() => {
 
 <template>
   <main class="login-screen">
-    <section class="login-side" aria-label="알고퀘스트 소개">
-      <RouterLink to="/" class="login-brand" aria-label="알고퀘스트 홈">
+    <section class="login-side" aria-label="알트 소개">
+      <RouterLink to="/" class="login-brand" aria-label="알트 홈">
         <span class="login-brand-mark" aria-hidden="true">
           <AqLogo class="login-brand-emblem" />
         </span>
         <span class="login-brand-text">
-          알고퀘스트
-          <small>▶ ALGO QUEST</small>
+          알트
+          <small>▶ ALTERNATIVE LEARNING TRACK</small>
         </span>
       </RouterLink>
 
       <div class="login-status">
         <span class="status-dot" aria-hidden="true" />
-        <strong>SERVICE FRONT ONLINE</strong>
+        <strong>AI ENGINE ONLINE</strong>
       </div>
 
       <div class="login-copy">
-        <p>WELCOME</p>
-        <h1>BACK, HERO</h1>
-        <span>문제 풀이, 코드 제출, 게시판까지 실제 서비스 기능으로 퀘스트를 이어가세요.</span>
+        <p><span class="acronym-key">A</span>lternative <span class="acronym-key">L</span>earning <span class="acronym-key">T</span>rack</p>
+        <h1><span class="acronym-key acronym-key-wide">Al</span>gorithm <span class="acronym-key">T</span>raining</h1>
+        <span>
+          AI 생성 문제로 알고리즘 공부를 더 알차게,<br />
+          풀이, 코드 제출, 게시판까지 한 흐름으로 이어가세요.
+        </span>
       </div>
 
       <dl class="login-stats" aria-label="서비스 요약">
@@ -146,8 +149,8 @@ onBeforeUnmount(() => {
       </dl>
 
       <blockquote class="login-quote">
-        <p>"하루 한 문제씩 꾸준히 푸는 것이 알고리즘 실력 향상의 가장 빠른 길입니다."</p>
-        <footer>- 알고퀘스트 학습 가이드</footer>
+        <p>"오늘의 AI 문제가 내일의 풀이 감각을 더 선명하게 만듭니다."</p>
+        <footer>- Alt Algorithm Training</footer>
       </blockquote>
     </section>
 
@@ -212,7 +215,7 @@ onBeforeUnmount(() => {
             </div>
 
             <button type="submit" class="enter-quest-btn" :disabled="loading">
-              <span>{{ loading ? 'ENTERING...' : 'ENTER QUEST' }}</span>
+              <span>{{ loading ? 'STARTING...' : 'START TRAINING' }}</span>
               <span aria-hidden="true">→</span>
             </button>
           </form>
@@ -231,22 +234,64 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .login-screen {
+  --login-left-bg: var(--panel-deep);
+  --login-stage-bg: #f4f0ea;
+  --login-grid-dot: rgba(124, 58, 237, 0.18);
+  --login-frame: var(--ink);
+  --login-window-bg: var(--surface-plain);
+  --login-window-title-bg: var(--login-frame);
+  --login-window-title-text: var(--primary-line);
+  --login-control-bg: #fff;
+  --login-control-text: var(--ink);
+  --login-divider-line: var(--ink);
+  --login-field-label: var(--ink);
+  --login-input-bg: var(--surface-panel);
+  --login-error-bg: #fff1f2;
+  --login-support-text: var(--primary-line);
+  --login-side-card-bg: var(--panel-dark);
+  --login-side-card-border: var(--primary-shadow);
+  --login-side-card-shadow: var(--primary-shadow);
+
   display: grid;
   grid-template-columns: minmax(360px, 40vw) minmax(0, 1fr);
   min-height: 100dvh;
   background:
-    linear-gradient(90deg, var(--ink) 0 40%, transparent 40%),
-    radial-gradient(circle at 1px 1px, rgba(124, 58, 237, 0.18) 1.5px, transparent 1.5px) 0 0 / 38px 38px,
-    #f4f0ea;
-  color: var(--ink);
+    linear-gradient(90deg, var(--login-left-bg) 0 40%, transparent 40%),
+    radial-gradient(circle at 1px 1px, var(--login-grid-dot) 1.5px, transparent 1.5px) 0 0 / 38px 38px,
+    var(--login-stage-bg);
+  color: var(--login-control-text);
+}
+
+:global(html[data-ui-theme="dark-dungeon"]) .login-screen {
+  --login-left-bg: #020617;
+  --login-stage-bg: #0b1120;
+  --login-grid-dot: rgba(96, 165, 250, 0.12);
+  --login-frame: #475569;
+  --login-window-bg: #111827;
+  --login-window-title-bg: #020617;
+  --login-window-title-text: #cbd5e1;
+  --login-control-bg: #0f172a;
+  --login-control-text: #f8fafc;
+  --login-divider-line: #475569;
+  --login-field-label: #e2e8f0;
+  --login-input-bg: #0f172a;
+  --login-error-bg: #3f1d24;
+  --login-support-text: #cbd5e1;
+  --login-brand-text: #f8fafc;
+  --login-brand-text-shadow: 2px 2px 0 #334155;
+  --login-side-card-bg: #0f172a;
+  --login-side-card-border: #334155;
+  --login-side-card-shadow: #020617;
 }
 
 .login-side {
+  --login-accent-green: #15803d;
+
   display: grid;
   align-content: space-between;
   gap: clamp(18px, 2vw, 34px);
   min-height: 100dvh;
-  background: var(--ink);
+  background: var(--login-left-bg);
   color: #f7f3ff;
   padding: clamp(24px, 3vw, 52px);
 }
@@ -268,24 +313,25 @@ onBeforeUnmount(() => {
 .login-brand-emblem {
   width: 100%;
   height: 100%;
-  filter: drop-shadow(5px 5px 0 #12092f);
+  filter: drop-shadow(5px 5px 0 var(--panel-deep));
 }
 
 .login-brand-text {
-  color: #c4b5fd;
+  color: var(--login-brand-text, var(--primary-line));
   font-family: var(--font-mono);
   font-size: clamp(1.05rem, 1.4vw, 1.45rem);
   font-weight: 950;
-  text-shadow: 4px 4px 0 var(--primary-shadow);
+  text-shadow: var(--login-brand-text-shadow, 4px 4px 0 var(--primary-shadow));
 }
 
 .login-brand small {
   display: block;
   margin-top: 7px;
-  color: var(--green);
-  font-size: 0.76rem;
-  letter-spacing: 0.18em;
+  color: var(--login-brand-kicker, var(--login-accent-green));
+  font-size: 0.78rem;
+  letter-spacing: 0;
   text-shadow: none;
+  white-space: nowrap;
 }
 
 .login-status {
@@ -294,9 +340,9 @@ onBeforeUnmount(() => {
   gap: 12px;
   width: fit-content;
   border: 3px solid var(--primary);
-  background: rgba(124, 58, 237, 0.12);
+  background: color-mix(in srgb, var(--primary) 14%, transparent);
   box-shadow: 5px 5px 0 var(--primary-shadow);
-  color: var(--green);
+  color: var(--login-accent-green);
   font-family: var(--font-mono);
   font-size: 0.8rem;
   font-weight: 950;
@@ -307,7 +353,7 @@ onBeforeUnmount(() => {
 .status-dot {
   width: 12px;
   height: 12px;
-  background: var(--cyan);
+  background: var(--login-accent-green);
 }
 
 .login-copy {
@@ -320,23 +366,56 @@ onBeforeUnmount(() => {
 .login-copy h1 {
   margin: 0;
   font-family: var(--font-mono);
-  font-size: clamp(2.2rem, 3.8vw, 4.1rem);
   font-weight: 950;
   letter-spacing: 0;
   line-height: 1.05;
+  white-space: nowrap;
 }
 
 .login-copy p {
   color: #fff;
+  font-size: 1.3rem;
 }
 
 .login-copy h1 {
-  color: #7dd3fc;
+  color: var(--cyan);
+  font-size: 2.7rem;
 }
 
-.login-copy span {
+.acronym-key {
+  color: color-mix(in srgb, var(--primary-line) 78%, white);
+  line-height: 1;
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--primary-line) 72%, transparent);
+  text-decoration-thickness: 0.08em;
+  text-underline-offset: 0.13em;
+}
+
+.acronym-key-wide {
+  letter-spacing: 0.01em;
+}
+
+.login-copy h1 .acronym-key {
+  display: inline-grid;
+  place-items: center;
+  min-width: 1.12em;
+  height: 1.12em;
+  margin-right: 0.03em;
+  border: 2px solid color-mix(in srgb, var(--primary-line) 78%, white);
+  background: color-mix(in srgb, var(--primary-line) 24%, var(--panel-dark));
+  box-shadow: 3px 3px 0 var(--primary-shadow);
+  color: #fff;
+  text-decoration: none;
+  transform: translateY(-0.04em);
+}
+
+.login-copy h1 .acronym-key-wide {
+  min-width: 1.56em;
+}
+
+.login-copy > span {
   max-width: 430px;
-  color: #c4b5fd;
+  color: var(--login-support-text);
   font-size: clamp(0.95rem, 1.05vw, 1.12rem);
   font-weight: 750;
   line-height: 1.75;
@@ -355,9 +434,9 @@ onBeforeUnmount(() => {
   justify-content: space-between;
   gap: 20px;
   min-height: 62px;
-  border: 3px solid var(--primary-shadow);
-  background: #130b36;
-  box-shadow: 5px 5px 0 var(--primary-shadow);
+  border: 3px solid var(--login-side-card-border);
+  background: var(--login-side-card-bg);
+  box-shadow: 5px 5px 0 var(--login-side-card-shadow);
   padding: 14px 20px;
 }
 
@@ -369,7 +448,7 @@ onBeforeUnmount(() => {
 }
 
 .login-stats dt {
-  color: #c4b5fd;
+  color: var(--login-support-text);
   font-size: 0.75rem;
   letter-spacing: 0.08em;
 }
@@ -405,7 +484,7 @@ onBeforeUnmount(() => {
 }
 
 .tone-purple {
-  color: #c4b5fd !important;
+  color: var(--login-support-text) !important;
 }
 
 .tone-gold {
@@ -413,9 +492,9 @@ onBeforeUnmount(() => {
 }
 
 .login-quote {
-  border: 3px solid var(--primary-shadow);
-  background: #130b36;
-  box-shadow: 5px 5px 0 var(--primary-shadow);
+  border: 3px solid var(--login-side-card-border);
+  background: var(--login-side-card-bg);
+  box-shadow: 5px 5px 0 var(--login-side-card-shadow);
   margin: 0;
   padding: 20px;
 }
@@ -428,7 +507,7 @@ onBeforeUnmount(() => {
 }
 
 .login-quote footer {
-  color: #c4b5fd;
+  color: var(--login-support-text);
   font-family: var(--font-mono);
   font-size: 0.78rem;
   font-weight: 850;
@@ -444,15 +523,15 @@ onBeforeUnmount(() => {
 
 .login-window {
   width: min(720px, 100%);
-  border: 4px solid var(--ink);
-  background: var(--surface-plain);
-  box-shadow: 8px 8px 0 var(--ink);
+  border: 4px solid var(--login-frame);
+  background: var(--login-window-bg);
+  box-shadow: 8px 8px 0 var(--login-frame);
 }
 
 .login-window-title {
-  border-bottom: 4px solid var(--ink);
-  background: var(--ink);
-  color: #c4b5fd;
+  border-bottom: 4px solid var(--login-frame);
+  background: var(--login-window-title-bg);
+  color: var(--login-window-title-text);
   font-family: var(--font-mono);
   font-size: 0.9rem;
   font-weight: 950;
@@ -480,9 +559,9 @@ onBeforeUnmount(() => {
   gap: 12px;
   min-height: 56px;
   border: 4px solid var(--primary-line);
-  background: white;
+  background: var(--login-control-bg);
   box-shadow: 5px 5px 0 var(--line-soft);
-  color: var(--ink);
+  color: var(--login-control-text);
   font-family: var(--font-mono);
   font-size: clamp(0.92rem, 1vw, 1.08rem);
   font-weight: 950;
@@ -503,6 +582,7 @@ onBeforeUnmount(() => {
   border-color: #facc15;
   background: #fef08a;
   box-shadow: 5px 5px 0 #ca8a04;
+  color: #1f2937;
 }
 
 .social-icon,
@@ -536,7 +616,7 @@ onBeforeUnmount(() => {
 .login-divider::after {
   display: block;
   height: 4px;
-  background: var(--ink);
+  background: var(--login-divider-line);
   content: "";
 }
 
@@ -546,7 +626,7 @@ onBeforeUnmount(() => {
 }
 
 .login-field > span {
-  color: var(--ink);
+  color: var(--login-field-label);
   font-family: var(--font-mono);
   font-size: 0.78rem;
   font-weight: 950;
@@ -558,11 +638,11 @@ onBeforeUnmount(() => {
   width: 100%;
   min-height: 56px;
   border: 4px solid var(--primary-line);
-  background: var(--surface-panel);
+  background: var(--login-input-bg);
 }
 
 .login-field input {
-  color: var(--ink);
+  color: var(--login-control-text);
   font-family: var(--font-mono);
   font-weight: 850;
   outline: none;
@@ -618,7 +698,7 @@ onBeforeUnmount(() => {
   display: grid;
   gap: 10px;
   border: 3px solid var(--red);
-  background: #fff1f2;
+  background: var(--login-error-bg);
   color: var(--red-dark);
   font-family: var(--font-mono);
   font-size: 0.8rem;
@@ -661,6 +741,16 @@ onBeforeUnmount(() => {
   }
 }
 
+@media (max-width: 1220px) and (min-width: 1021px) {
+  .login-copy p {
+    font-size: 0.95rem;
+  }
+
+  .login-copy h1 {
+    font-size: 2.05rem;
+  }
+}
+
 @media (max-width: 620px) {
   .login-side,
   .login-stage {
@@ -669,6 +759,18 @@ onBeforeUnmount(() => {
 
   .login-window-body {
     padding: 18px;
+  }
+
+  .login-brand small {
+    font-size: 0.66rem;
+  }
+
+  .login-copy p {
+    font-size: 0.78rem;
+  }
+
+  .login-copy h1 {
+    font-size: 1.55rem;
   }
 }
 

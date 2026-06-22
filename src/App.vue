@@ -1,8 +1,9 @@
 <script setup>
-import { computed, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
 import AqLogo from '@/components/AqLogo.vue'
 import { useAuthStore } from '@/stores/auth'
+import { applyUiSettings, readStoredUiSettings } from '@/utils/uiSettings'
 
 const auth = useAuthStore()
 const route = useRoute()
@@ -35,6 +36,7 @@ const routeTitleMap = {
   'board-detail': '게시글',
   mypage: '내 정보',
   'admin-problem-publications': '문제 공개 관리',
+  settings: '설정',
 }
 
 watch(
@@ -51,11 +53,19 @@ watch(
   },
 )
 
+const toggleProfileMenu = () => {
+  isProfileOpen.value = !isProfileOpen.value
+}
+
 const handleLogout = () => {
   auth.logout()
   isProfileOpen.value = false
   router.push('/')
 }
+
+onMounted(() => {
+  applyUiSettings(readStoredUiSettings())
+})
 </script>
 
 <template>
@@ -63,25 +73,25 @@ const handleLogout = () => {
 
   <div v-else class="app-shell">
     <aside class="sidebar" aria-label="주요 메뉴">
-      <RouterLink to="/" class="brand" aria-label="알고퀘스트 홈">
+      <RouterLink to="/" class="brand" aria-label="알트 홈">
         <span class="brand-mark">
           <AqLogo class="brand-logo" />
         </span>
         <span class="brand-copy">
-          <strong>알고퀘스트</strong>
-          <small>▶ ALGO QUEST</small>
+          <strong>알트</strong>
+          <small>▶ ALGORITHM TRAINING</small>
         </span>
       </RouterLink>
 
       <section class="status-panel compact-status" aria-label="서비스 상태">
-        <p class="panel-eyebrow">■ SERVICE FRONT</p>
+        <p class="panel-eyebrow">■ ALT STATUS</p>
         <div class="compact-status-grid">
           <RouterLink to="/problems">
-            <span>PROBLEMS</span>
-            <strong>OPEN</strong>
+            <span>QUESTS</span>
+            <strong>READY</strong>
           </RouterLink>
           <RouterLink to="/board">
-            <span>BOARD</span>
+            <span>COMMUNITY</span>
             <strong>LIVE</strong>
           </RouterLink>
         </div>
@@ -108,6 +118,11 @@ const handleLogout = () => {
       </nav>
 
       <div class="side-profile">
+        <RouterLink to="/settings" class="side-settings-link">
+          <span class="nav-icon">⚙</span>
+          <span>SETTINGS</span>
+        </RouterLink>
+
         <RouterLink v-if="auth.isLoggedIn" to="/mypage" class="side-player-card">
           <img
             v-if="showNavProfileImage"
@@ -149,7 +164,7 @@ const handleLogout = () => {
               class="top-icon-btn top-profile-btn"
               :aria-expanded="isProfileOpen"
               aria-haspopup="menu"
-              @click="isProfileOpen = !isProfileOpen"
+              @click="toggleProfileMenu"
             >
               <img
                 v-if="showNavProfileImage"
