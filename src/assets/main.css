@@ -12,6 +12,8 @@
   --surface-panel: #fbfaff;
   --surface-tint: #eee9ff;
   --surface-raised: #ffffff;
+  --panel-dark: #130b36;
+  --panel-deep: #12092f;
   --background: #f2efff;
   --line-soft: #ddd6fe;
   --muted: #7d70a9;
@@ -87,6 +89,205 @@
   --transition-slow: 300ms ease;
 }
 
+html[data-ui-theme="ocean-blue"] {
+  --ink: #0f172a;
+  --ink-2: #1e3a8a;
+  --primary: #2563eb;
+  --primary-dark: #1e3a8a;
+  --primary-shadow: #1d4ed8;
+  --primary-line: #93c5fd;
+  --primary-soft: #dbeafe;
+  --surface-plain: #fbfdff;
+  --surface-panel: #eff6ff;
+  --surface-tint: #e4f0ff;
+  --surface-raised: #ffffff;
+  --panel-dark: #172554;
+  --panel-deep: #071536;
+  --background: #eff6ff;
+  --line-soft: #bfdbfe;
+  --muted: #64748b;
+  --muted-2: #38bdf8;
+  --color-primary-hover: #1d4ed8;
+  --color-error-light: #fff1f2;
+  --theme-login-accent: #38bdf8;
+  --theme-login-left-bg: #071536;
+  --theme-login-stage-bg: #eff6ff;
+  --theme-login-grid-dot: rgba(59, 130, 246, 0.18);
+  --theme-login-frame: #1d4ed8;
+  --theme-login-window-bg: #fbfdff;
+  --theme-login-window-title-bg: #172554;
+  --theme-login-window-title-text: #dbeafe;
+  --theme-login-control-bg: #ffffff;
+  --theme-login-control-text: #0f172a;
+  --theme-login-divider-line: #1d4ed8;
+  --theme-login-field-label: #1e3a8a;
+  --theme-login-input-bg: #eff6ff;
+  --theme-login-support-text: #bfdbfe;
+  --theme-login-side-card-bg: #102a5c;
+  --theme-login-side-card-border: #2563eb;
+  --theme-login-side-card-shadow: #1d4ed8;
+  --theme-login-hero-accent: #38bdf8;
+  --theme-login-stat-positive: #38bdf8;
+  --theme-login-stat-secondary: #93c5fd;
+  --theme-login-stat-warm: #fbbf24;
+  --login-brand-text: #dbeafe;
+  --login-brand-text-shadow: 2px 2px 0 #1d4ed8;
+  --login-brand-kicker: #38bdf8;
+  --pixel-shadow: 5px 5px 0 var(--primary-shadow);
+  --pixel-shadow-muted: 4px 4px 0 var(--line-soft);
+}
+
+html[data-ui-theme="dark-dungeon"] {
+  --ink: #f8fafc;
+  --ink-2: #e5e7eb;
+  --primary: #2563eb;
+  --primary-dark: #93c5fd;
+  --primary-shadow: #0f172a;
+  --primary-line: #334155;
+  --primary-soft: #1e293b;
+  --surface-plain: #111827;
+  --surface-panel: #0f172a;
+  --surface-tint: #111827;
+  --surface-raised: #1f2937;
+  --panel-dark: #020617;
+  --panel-deep: #020617;
+  --background: #0b1120;
+  --line-soft: #263244;
+  --muted: #94a3b8;
+  --muted-2: #cbd5e1;
+  --green: #34d399;
+  --green-dark: #86efac;
+  --red: #f87171;
+  --red-dark: #fca5a5;
+  --gold: #fbbf24;
+  --gold-dark: #fde68a;
+  --blue: #60a5fa;
+  --cyan: #22d3ee;
+  --color-primary-hover: #1d4ed8;
+  --color-error-light: #3f1d24;
+  --theme-login-accent: #22c55e;
+  --theme-login-left-bg: #020617;
+  --theme-login-stage-bg: #0b1120;
+  --theme-login-grid-dot: rgba(96, 165, 250, 0.12);
+  --theme-login-frame: #475569;
+  --theme-login-window-bg: #111827;
+  --theme-login-window-title-bg: #020617;
+  --theme-login-window-title-text: #cbd5e1;
+  --theme-login-control-bg: #0f172a;
+  --theme-login-control-text: #f8fafc;
+  --theme-login-divider-line: #475569;
+  --theme-login-field-label: #e2e8f0;
+  --theme-login-input-bg: #0f172a;
+  --theme-login-error-bg: #3f1d24;
+  --theme-login-support-text: #cbd5e1;
+  --theme-login-side-card-bg: #0f172a;
+  --theme-login-side-card-border: #334155;
+  --theme-login-side-card-shadow: #020617;
+  --theme-login-hero-accent: #60a5fa;
+  --theme-login-stat-positive: #22c55e;
+  --theme-login-stat-secondary: #94a3b8;
+  --theme-login-stat-warm: #fbbf24;
+  --login-brand-text: #f8fafc;
+  --login-brand-text-shadow: 2px 2px 0 #334155;
+  --login-brand-kicker: #22c55e;
+  --pixel-shadow: 5px 5px 0 #020617;
+  --pixel-shadow-muted: 4px 4px 0 #1e293b;
+}
+
+html[data-ui-theme="mono"] {
+  --ink: #111827;
+  --ink-2: #374151;
+  --primary: #4b5563;
+  --primary-dark: #1f2937;
+  --primary-shadow: #9ca3af;
+  --primary-line: #d1d5db;
+  --primary-soft: #f9fafb;
+  --surface-plain: #ffffff;
+  --surface-panel: #ffffff;
+  --surface-tint: #f8fafc;
+  --surface-raised: #ffffff;
+  --panel-dark: #374151;
+  --panel-deep: #111827;
+  --background: #ffffff;
+  --line-soft: #e5e7eb;
+  --muted: #6b7280;
+  --muted-2: #9ca3af;
+  --green: #166534;
+  --green-dark: #14532d;
+  --red: #9ca3af;
+  --red-dark: #6b7280;
+  --gold: #6b7280;
+  --gold-dark: #4b5563;
+  --blue: #6b7280;
+  --cyan: #9ca3af;
+  --color-primary-hover: #374151;
+  --color-error-light: #f3f4f6;
+  --overview-green: #3f7f68;
+  --overview-green-border: #93b9aa;
+  --overview-green-shadow: #c8ddd4;
+  --overview-blue: #4f6f95;
+  --overview-blue-border: #9fb4cf;
+  --overview-blue-shadow: #cfdae8;
+  --overview-purple: #746891;
+  --overview-purple-border: #b5adc9;
+  --overview-purple-shadow: #ddd8e8;
+  --overview-gold: #8a7544;
+  --overview-gold-border: #c9b984;
+  --overview-gold-shadow: #e8dfc5;
+  --overview-red: #9b5f5f;
+  --overview-red-border: #c99f9f;
+  --overview-red-shadow: #ead1d1;
+  --dashboard-titlebar-bg: #46576b;
+  --dashboard-titlebar-text: #f8fafc;
+  --dashboard-title-highlight: #f2f7fb;
+  --dashboard-title-meta: #dce7f3;
+  --dashboard-hero-bg: linear-gradient(180deg, #ffffff 0%, #f7fafc 100%);
+  --dashboard-level-bg: #53677d;
+  --dashboard-level-border: #a9bbca;
+  --dashboard-level-shadow: #c7d2dc;
+  --dashboard-level-text: #ffffff;
+  --dashboard-level-label: #dbe7f2;
+  --dashboard-xp-border: #243244;
+  --dashboard-xp-track: #ffffff;
+  --dashboard-xp-fill: #53677d;
+  --dashboard-xp-fill-end: #8fa7bb;
+  --dashboard-action-bg: #46576b;
+  --dashboard-action-shadow: #c7d2dc;
+  --dashboard-action-text: #ffffff;
+  --login-brand-text: #f8fafc;
+  --login-brand-text-shadow: 2px 2px 0 #334155;
+  --login-brand-kicker: #22c55e;
+  --pixel-shadow: 5px 5px 0 #cbd5e1;
+  --pixel-shadow-muted: 4px 4px 0 #e5e7eb;
+}
+
+html.high-contrast {
+  --primary-line: var(--ink);
+  --line-soft: var(--ink);
+  --muted: var(--ink-2);
+}
+
+html[data-ui-font-scale="small"] {
+  font-size: 15px;
+}
+
+html[data-ui-font-scale="normal"] {
+  font-size: 16px;
+}
+
+html[data-ui-font-scale="large"] {
+  font-size: 17.5px;
+}
+
+html.reduce-motion *,
+html.reduce-motion *::before,
+html.reduce-motion *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  scroll-behavior: auto !important;
+  transition-duration: 0.001ms !important;
+}
+
 *,
 *::before,
 *::after {
@@ -103,7 +304,12 @@ html {
 body {
   min-height: 100dvh;
   background:
-    radial-gradient(circle at 1px 1px, rgba(124, 58, 237, 0.16) 1.5px, transparent 1.5px) 0 0 / 38px 38px,
+    radial-gradient(
+        circle at 1px 1px,
+        color-mix(in srgb, var(--primary) 18%, transparent) 1.5px,
+        transparent 1.5px
+      )
+      0 0 / 38px 38px,
     var(--background);
   color: var(--color-text);
   font-family: var(--font-family);
@@ -287,7 +493,7 @@ img {
 .input-group textarea:focus,
 .input-group select:focus {
   border-color: var(--primary);
-  background: #fff;
+  background: var(--surface-raised);
   box-shadow: 4px 4px 0 var(--line-soft);
 }
 
