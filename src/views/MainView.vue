@@ -1,12 +1,17 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
+import { fetchMyStreak } from '@/api/streaks'
+import DailyStreakGrass from '@/components/DailyStreakGrass.vue'
 import { useAuthStore } from '@/stores/auth'
 
 const auth = useAuthStore()
 
 const heroName = computed(() => auth.user?.nickname || 'Hero')
 const isAdmin = computed(() => auth.user?.role === 'ADMIN')
+const streak = ref(null)
+const isLoadingStreak = ref(false)
+const streakError = ref('')
 
 const overviewCards = computed(() => {
   const cards = [
@@ -60,6 +65,32 @@ const overviewCards = computed(() => {
 
   return cards
 })
+
+const loadStreak = async () => {
+  if (!auth.isLoggedIn) {
+    streak.value = null
+    return
+  }
+
+  isLoadingStreak.value = true
+  streakError.value = ''
+  try {
+    streak.value = await fetchMyStreak()
+  } catch (error) {
+    streakError.value = error.response?.data?.message || '스트릭을 불러오지 못했습니다.'
+  } finally {
+    isLoadingStreak.value = false
+  }
+}
+
+watch(
+  () => auth.isLoggedIn,
+  () => {
+    loadStreak()
+  },
+)
+
+onMounted(loadStreak)
 </script>
 
 <template>
@@ -91,6 +122,10 @@ const overviewCards = computed(() => {
         <RouterLink :to="auth.isLoggedIn ? '/problems' : '/login'" class="btn btn-primary">
           {{ auth.isLoggedIn ? '문제 풀러가기' : '로그인하기' }}
         </RouterLink>
+      </div>
+
+      <div v-if="auth.isLoggedIn" class="dashboard-streak">
+        <DailyStreakGrass :streak="streak" :loading="isLoadingStreak" :error="streakError" compact />
       </div>
     </section>
 
@@ -254,6 +289,11 @@ const overviewCards = computed(() => {
   background: var(--dashboard-action-bg, var(--primary));
   box-shadow: 5px 5px 0 var(--dashboard-action-shadow, var(--primary-shadow));
   color: var(--dashboard-action-text, #fff);
+}
+
+.dashboard-streak {
+  padding: 0 clamp(22px, 3vw, 38px) clamp(22px, 3vw, 34px);
+  background: var(--dashboard-hero-bg, transparent);
 }
 
 .section-heading {
