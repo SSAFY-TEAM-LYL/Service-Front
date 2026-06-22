@@ -152,12 +152,6 @@ onMounted(() => {
       <header class="topbar">
         <h1>{{ pageTitle }}</h1>
         <div class="top-actions">
-          <RouterLink to="/problems" class="top-search" aria-label="문제 목록으로 이동">
-            <span>⌕</span>
-            <span class="search">문제 목록</span>
-            <kbd>GO</kbd>
-          </RouterLink>
-
           <div class="profile-menu">
             <button
               type="button"

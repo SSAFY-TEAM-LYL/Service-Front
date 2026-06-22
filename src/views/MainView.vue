@@ -66,7 +66,7 @@ const overviewCards = computed(() => {
   <div class="dashboard-page fade-in">
     <section class="dashboard-panel player-status-panel">
       <div class="panel-titlebar">
-        <strong>★ PLAYER STATUS</strong>
+        <strong>★ ALT STATUS</strong>
         <span>2026.06 SERVICE</span>
       </div>
 

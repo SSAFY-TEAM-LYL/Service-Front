@@ -234,23 +234,28 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .login-screen {
-  --login-left-bg: var(--panel-deep);
-  --login-stage-bg: #f4f0ea;
-  --login-grid-dot: rgba(124, 58, 237, 0.18);
-  --login-frame: var(--ink);
-  --login-window-bg: var(--surface-plain);
-  --login-window-title-bg: var(--login-frame);
-  --login-window-title-text: var(--primary-line);
-  --login-control-bg: #fff;
-  --login-control-text: var(--ink);
-  --login-divider-line: var(--ink);
-  --login-field-label: var(--ink);
-  --login-input-bg: var(--surface-panel);
-  --login-error-bg: #fff1f2;
-  --login-support-text: var(--primary-line);
-  --login-side-card-bg: var(--panel-dark);
-  --login-side-card-border: var(--primary-shadow);
-  --login-side-card-shadow: var(--primary-shadow);
+  --login-accent: var(--theme-login-accent, #15803d);
+  --login-left-bg: var(--theme-login-left-bg, var(--panel-deep));
+  --login-stage-bg: var(--theme-login-stage-bg, #f4f0ea);
+  --login-grid-dot: var(--theme-login-grid-dot, rgba(124, 58, 237, 0.18));
+  --login-frame: var(--theme-login-frame, var(--ink));
+  --login-window-bg: var(--theme-login-window-bg, var(--surface-plain));
+  --login-window-title-bg: var(--theme-login-window-title-bg, var(--login-frame));
+  --login-window-title-text: var(--theme-login-window-title-text, var(--primary-line));
+  --login-control-bg: var(--theme-login-control-bg, #fff);
+  --login-control-text: var(--theme-login-control-text, var(--ink));
+  --login-divider-line: var(--theme-login-divider-line, var(--ink));
+  --login-field-label: var(--theme-login-field-label, var(--ink));
+  --login-input-bg: var(--theme-login-input-bg, var(--surface-panel));
+  --login-error-bg: var(--theme-login-error-bg, #fff1f2);
+  --login-support-text: var(--theme-login-support-text, var(--primary-line));
+  --login-side-card-bg: var(--theme-login-side-card-bg, var(--panel-dark));
+  --login-side-card-border: var(--theme-login-side-card-border, var(--primary-shadow));
+  --login-side-card-shadow: var(--theme-login-side-card-shadow, var(--primary-shadow));
+  --login-hero-accent: var(--theme-login-hero-accent, var(--cyan));
+  --login-stat-positive: var(--theme-login-stat-positive, var(--green));
+  --login-stat-secondary: var(--theme-login-stat-secondary, var(--login-support-text));
+  --login-stat-warm: var(--theme-login-stat-warm, var(--gold));
 
   display: grid;
   grid-template-columns: minmax(360px, 40vw) minmax(0, 1fr);
@@ -262,31 +267,7 @@ onBeforeUnmount(() => {
   color: var(--login-control-text);
 }
 
-:global(html[data-ui-theme="dark-dungeon"]) .login-screen {
-  --login-left-bg: #020617;
-  --login-stage-bg: #0b1120;
-  --login-grid-dot: rgba(96, 165, 250, 0.12);
-  --login-frame: #475569;
-  --login-window-bg: #111827;
-  --login-window-title-bg: #020617;
-  --login-window-title-text: #cbd5e1;
-  --login-control-bg: #0f172a;
-  --login-control-text: #f8fafc;
-  --login-divider-line: #475569;
-  --login-field-label: #e2e8f0;
-  --login-input-bg: #0f172a;
-  --login-error-bg: #3f1d24;
-  --login-support-text: #cbd5e1;
-  --login-brand-text: #f8fafc;
-  --login-brand-text-shadow: 2px 2px 0 #334155;
-  --login-side-card-bg: #0f172a;
-  --login-side-card-border: #334155;
-  --login-side-card-shadow: #020617;
-}
-
 .login-side {
-  --login-accent-green: #15803d;
-
   display: grid;
   align-content: space-between;
   gap: clamp(18px, 2vw, 34px);
@@ -327,7 +308,7 @@ onBeforeUnmount(() => {
 .login-brand small {
   display: block;
   margin-top: 7px;
-  color: var(--login-brand-kicker, var(--login-accent-green));
+  color: var(--login-brand-kicker, var(--login-accent));
   font-size: 0.78rem;
   letter-spacing: 0;
   text-shadow: none;
@@ -342,7 +323,7 @@ onBeforeUnmount(() => {
   border: 3px solid var(--primary);
   background: color-mix(in srgb, var(--primary) 14%, transparent);
   box-shadow: 5px 5px 0 var(--primary-shadow);
-  color: var(--login-accent-green);
+  color: var(--login-accent);
   font-family: var(--font-mono);
   font-size: 0.8rem;
   font-weight: 950;
@@ -353,7 +334,7 @@ onBeforeUnmount(() => {
 .status-dot {
   width: 12px;
   height: 12px;
-  background: var(--login-accent-green);
+  background: var(--login-accent);
 }
 
 .login-copy {
@@ -378,7 +359,7 @@ onBeforeUnmount(() => {
 }
 
 .login-copy h1 {
-  color: var(--cyan);
+  color: var(--login-hero-accent);
   font-size: 2.7rem;
 }
 
@@ -480,15 +461,15 @@ onBeforeUnmount(() => {
 }
 
 .tone-green {
-  color: var(--green) !important;
+  color: var(--login-stat-positive) !important;
 }
 
 .tone-purple {
-  color: var(--login-support-text) !important;
+  color: var(--login-stat-secondary) !important;
 }
 
 .tone-gold {
-  color: var(--gold) !important;
+  color: var(--login-stat-warm) !important;
 }
 
 .login-quote {
