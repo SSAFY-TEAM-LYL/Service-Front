@@ -38,37 +38,37 @@
 .brand-logo {
   width: 56px;
   height: 56px;
-  filter: drop-shadow(4px 4px 0 var(--primary-shadow));
+  filter: none;
 }
 
 .aq-logo-svg {
+  position: relative;
+  display: block;
   overflow: visible;
+  width: 100%;
+  height: 100%;
 }
 
-.aq-logo-outer {
-  fill: var(--primary);
-  stroke: var(--primary-shadow);
-  stroke-width: 4;
+.aq-logo-image {
+  display: none;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 
-.aq-logo-frame {
-  fill: var(--primary-line);
-  stroke: var(--primary-shadow);
-  stroke-width: 4;
+.aq-logo-image-purple {
+  display: block;
 }
 
-.aq-logo-face {
-  fill: var(--primary-soft);
-  stroke: var(--primary-shadow);
-  stroke-width: 3;
+html[data-ui-theme] .aq-logo-image {
+  display: none;
 }
 
-.aq-logo-monogram {
-  fill: var(--ink);
-  font-family: var(--font-mono);
-  font-size: 20px;
-  font-weight: 950;
-  letter-spacing: 0;
+html[data-ui-theme="mono"] .aq-logo-image-mono,
+html[data-ui-theme="quest-purple"] .aq-logo-image-purple,
+html[data-ui-theme="ocean-blue"] .aq-logo-image-blue,
+html[data-ui-theme="dark-dungeon"] .aq-logo-image-dark {
+  display: block;
 }
 
 .brand-copy {
@@ -168,28 +168,28 @@
   min-height: 46px;
   padding: 10px 12px;
   border: 3px solid transparent;
-  color: var(--primary-shadow);
+  color: var(--nav-link-text, var(--primary-shadow));
   font-family: var(--font-mono);
   font-size: 0.84rem;
   font-weight: 850;
 }
 
 .nav-link:hover {
-  background: var(--primary-soft);
-  color: var(--primary-dark);
+  background: var(--nav-link-hover-bg, var(--primary-soft));
+  color: var(--nav-link-hover-text, var(--primary-dark));
 }
 
 .nav-link.router-link-active {
-  border-color: var(--muted-2);
-  background: var(--primary);
-  box-shadow: 4px 4px 0 var(--primary-shadow);
-  color: #fff;
+  border-color: var(--nav-link-active-border, var(--muted-2));
+  background: var(--nav-link-active-bg, var(--primary));
+  box-shadow: 4px 4px 0 var(--nav-link-active-shadow, var(--primary-shadow));
+  color: var(--nav-link-active-text, #fff);
   transform: translate(-1px, -1px);
 }
 
 .nav-link.router-link-active::before {
   content: "▶";
-  color: var(--gold);
+  color: var(--nav-link-active-cue, var(--gold));
   font-size: 0.72rem;
 }
 
