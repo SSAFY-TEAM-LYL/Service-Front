@@ -236,8 +236,8 @@ onBeforeUnmount(() => {
 .login-screen {
   --login-accent: var(--theme-login-accent, #15803d);
   --login-left-bg: var(--theme-login-left-bg, var(--panel-deep));
-  --login-stage-bg: var(--theme-login-stage-bg, #f4f0ea);
-  --login-grid-dot: var(--theme-login-grid-dot, rgba(124, 58, 237, 0.18));
+  --login-stage-bg: var(--theme-login-stage-bg, #fbfbfd);
+  --login-grid-dot: var(--theme-login-grid-dot, rgba(76, 29, 149, 0.07));
   --login-frame: var(--theme-login-frame, var(--ink));
   --login-window-bg: var(--theme-login-window-bg, var(--surface-plain));
   --login-window-title-bg: var(--theme-login-window-title-bg, var(--login-frame));
@@ -280,21 +280,21 @@ onBeforeUnmount(() => {
 .login-brand {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 10px;
   width: max-content;
 }
 
 .login-brand-mark {
   display: grid;
   place-items: center;
-  width: clamp(58px, 4.9vw, 74px);
-  height: clamp(58px, 4.9vw, 74px);
+  width: 76px;
+  height: 76px;
 }
 
 .login-brand-emblem {
   width: 100%;
   height: 100%;
-  filter: drop-shadow(5px 5px 0 var(--panel-deep));
+  filter: none;
 }
 
 .login-brand-text {
@@ -307,7 +307,7 @@ onBeforeUnmount(() => {
 
 .login-brand small {
   display: block;
-  margin-top: 7px;
+  margin-top: 2px;
   color: var(--login-brand-kicker, var(--login-accent));
   font-size: 0.78rem;
   letter-spacing: 0;
