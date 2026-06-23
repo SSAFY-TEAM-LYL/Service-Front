@@ -187,9 +187,6 @@ html[data-ui-theme="dark-dungeon"] {
   --theme-login-side-card-border: #334155;
   --theme-login-side-card-shadow: #020617;
   --theme-login-hero-accent: #60a5fa;
-  --theme-login-status-accent: #4ade80;
-  --theme-login-status-border: #64748b;
-  --theme-login-status-bg: rgba(34, 197, 94, 0.08);
   --theme-login-stat-positive: #22c55e;
   --theme-login-stat-secondary: #94a3b8;
   --theme-login-stat-warm: #fbbf24;
@@ -271,12 +268,6 @@ html[data-ui-theme="mono"] {
   --login-brand-text: #f8fafc;
   --login-brand-text-shadow: 2px 2px 0 #334155;
   --login-brand-kicker: #22c55e;
-  --theme-login-status-accent: #4ade80;
-  --theme-login-status-border: #94a3b8;
-  --theme-login-status-bg: rgba(34, 197, 94, 0.1);
-  --theme-login-stat-positive: #22c55e;
-  --theme-login-stat-secondary: #e2e8f0;
-  --theme-login-stat-warm: #fbbf24;
   --pixel-shadow: 5px 5px 0 #cbd5e1;
   --pixel-shadow-muted: 4px 4px 0 #e5e7eb;
 }

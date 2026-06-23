@@ -253,9 +253,6 @@ onBeforeUnmount(() => {
   --login-side-card-border: var(--theme-login-side-card-border, var(--primary-shadow));
   --login-side-card-shadow: var(--theme-login-side-card-shadow, var(--primary-shadow));
   --login-hero-accent: var(--theme-login-hero-accent, var(--cyan));
-  --login-status-accent: var(--theme-login-status-accent, var(--login-accent));
-  --login-status-border: var(--theme-login-status-border, var(--primary));
-  --login-status-bg: var(--theme-login-status-bg, color-mix(in srgb, var(--primary) 14%, transparent));
   --login-stat-positive: var(--theme-login-stat-positive, var(--green));
   --login-stat-secondary: var(--theme-login-stat-secondary, var(--login-support-text));
   --login-stat-warm: var(--theme-login-stat-warm, var(--gold));
@@ -323,10 +320,10 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 12px;
   width: fit-content;
-  border: 3px solid var(--login-status-border);
-  background: var(--login-status-bg);
+  border: 3px solid var(--primary);
+  background: color-mix(in srgb, var(--primary) 14%, transparent);
   box-shadow: 5px 5px 0 var(--primary-shadow);
-  color: var(--login-status-accent);
+  color: var(--login-accent);
   font-family: var(--font-mono);
   font-size: 0.8rem;
   font-weight: 950;
@@ -337,7 +334,7 @@ onBeforeUnmount(() => {
 .status-dot {
   width: 12px;
   height: 12px;
-  background: var(--login-status-accent);
+  background: var(--login-accent);
 }
 
 .login-copy {
