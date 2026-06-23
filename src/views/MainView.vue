@@ -6,12 +6,23 @@ import DailyStreakGrass from '@/components/DailyStreakGrass.vue'
 import { useAuthStore } from '@/stores/auth'
 
 const auth = useAuthStore()
+const XP_PER_LEVEL = 50
 
 const heroName = computed(() => auth.user?.nickname || 'Alt Learner')
 const isAdmin = computed(() => auth.user?.role === 'ADMIN')
 const streak = ref(null)
 const isLoadingStreak = ref(false)
 const streakError = ref('')
+
+const currentXp = computed(() => Number(auth.user?.xp) || 0)
+const currentLevel = computed(() => Number(auth.user?.level) || Math.floor(currentXp.value / XP_PER_LEVEL) + 1)
+const currentLevelXp = computed(() => currentXp.value % XP_PER_LEVEL)
+const nextLevelXp = computed(() => XP_PER_LEVEL - currentLevelXp.value)
+const xpProgressPercent = computed(() => Math.min(100, Math.max(0, (currentLevelXp.value / XP_PER_LEVEL) * 100)))
+const xpProgressText = computed(() => `${currentLevelXp.value} / ${XP_PER_LEVEL} XP`)
+const xpStatusMessage = computed(() => {
+  return `현재 경험치 : ${currentXp.value} XP, Lv. ${currentLevel.value + 1}까지 ${nextLevelXp.value} XP 남았습니다! 화이팅!`
+})
 
 const overviewCards = computed(() => {
   const cards = [
@@ -104,24 +115,25 @@ onMounted(loadStreak)
       <div class="player-summary">
         <div class="level-box">
           <span>LV</span>
-          <strong>{{ auth.isLoggedIn ? '12' : '?' }}</strong>
+          <strong>{{ currentLevel }}</strong>
         </div>
 
         <div class="player-copy">
           <p class="eyebrow">WELCOME BACK</p>
           <h1>{{ heroName }}</h1>
-          <p>
-            문제 풀이, 코드 제출, 게시판 기능이 준비되어 있습니다.
-            학습 흐름은 문제 풀이와 제출 화면에서 이어집니다.
-          </p>
-          <div class="xp-bar" aria-label="서비스 진행도">
-            <span />
+          <p>{{ xpStatusMessage }}</p>
+          <div class="xp-meta" aria-hidden="true">
+            <span>Lv. {{ currentLevel }}</span>
+            <strong>{{ xpProgressText }}</strong>
+            <span>Lv. {{ currentLevel + 1 }}</span>
+          </div>
+          <div
+            class="xp-bar"
+            :aria-label="`레벨 ${currentLevel} 경험치 진행도 ${xpProgressText}`"
+          >
+            <span :style="{ width: `${xpProgressPercent}%` }" />
           </div>
         </div>
-
-        <RouterLink :to="auth.isLoggedIn ? '/problems' : '/login'" class="btn btn-primary">
-          {{ auth.isLoggedIn ? '문제 풀러가기' : '로그인하기' }}
-        </RouterLink>
       </div>
 
       <div v-if="auth.isLoggedIn" class="dashboard-streak">
@@ -210,7 +222,7 @@ onMounted(loadStreak)
 
 .player-summary {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
   gap: 24px;
   padding: clamp(22px, 3vw, 38px);
@@ -266,9 +278,26 @@ onMounted(loadStreak)
   font-weight: 750;
 }
 
+.xp-meta {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  margin-top: 16px;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 900;
+}
+
+.xp-meta strong {
+  justify-self: center;
+  color: var(--ink);
+}
+
 .xp-bar {
   height: 18px;
-  margin-top: 16px;
+  margin-top: 8px;
   border: 4px solid var(--dashboard-xp-border, var(--primary-dark));
   background: var(--dashboard-xp-track, var(--primary-soft));
 }
@@ -282,13 +311,6 @@ onMounted(loadStreak)
     var(--dashboard-xp-fill, var(--primary)),
     var(--dashboard-xp-fill-end, var(--cyan))
   );
-}
-
-.player-summary .btn-primary {
-  border-color: var(--dashboard-action-bg, var(--primary));
-  background: var(--dashboard-action-bg, var(--primary));
-  box-shadow: 5px 5px 0 var(--dashboard-action-shadow, var(--primary-shadow));
-  color: var(--dashboard-action-text, #fff);
 }
 
 .dashboard-streak {
@@ -426,11 +448,6 @@ onMounted(loadStreak)
 
   .player-summary {
     grid-template-columns: auto minmax(0, 1fr);
-  }
-
-  .player-summary .btn {
-    grid-column: 1 / -1;
-    justify-self: start;
   }
 }
 
