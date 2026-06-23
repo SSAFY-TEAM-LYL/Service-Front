@@ -193,14 +193,6 @@ html[data-ui-theme="dark-dungeon"] {
   --login-brand-text: #f8fafc;
   --login-brand-text-shadow: 2px 2px 0 #334155;
   --login-brand-kicker: #22c55e;
-  --nav-link-text: #cbd5e1;
-  --nav-link-hover-bg: #1e293b;
-  --nav-link-hover-text: #f8fafc;
-  --nav-link-active-border: #60a5fa;
-  --nav-link-active-bg: #1d4ed8;
-  --nav-link-active-shadow: #020617;
-  --nav-link-active-text: #ffffff;
-  --nav-link-active-cue: #fbbf24;
   --pixel-shadow: 5px 5px 0 #020617;
   --pixel-shadow-muted: 4px 4px 0 #1e293b;
 }
