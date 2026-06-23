@@ -327,7 +327,7 @@ const handleWithdrawal = async () => {
 }
 
 .settings-form {
-  max-width: 520px;
+  max-width: none;
 }
 
 .profile-preview {

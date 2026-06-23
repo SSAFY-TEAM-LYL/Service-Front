@@ -133,7 +133,7 @@ const handleCancel = () => {
 
 <style scoped>
 .write-page {
-  max-width: 720px;
+  max-width: none;
   padding: 0;
 }
 

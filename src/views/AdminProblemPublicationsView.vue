@@ -205,7 +205,7 @@ onMounted(loadProblems)
 <style scoped>
 .admin-page {
   padding: 0;
-  max-width: 1180px;
+  max-width: none;
 }
 
 .admin-top {

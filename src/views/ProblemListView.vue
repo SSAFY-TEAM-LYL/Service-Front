@@ -264,7 +264,7 @@ onMounted(async () => {
 <style scoped>
 .problem-page {
   padding: 0;
-  max-width: 1180px;
+  max-width: none;
 }
 
 .problem-top {

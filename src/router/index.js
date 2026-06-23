@@ -11,6 +11,7 @@ const router = createRouter({
       path: '/',
       name: 'main',
       component: () => import('@/views/MainView.vue'),
+      meta: { requiresAuth: true },
     },
     {
       path: '/login',
@@ -88,16 +89,19 @@ const router = createRouter({
 })
 
 router.beforeEach(async (to) => {
-  if (!to.meta.requiresAuth && !to.meta.requiresAdmin) return true
-
   const auth = useAuthStore()
+
   if (auth.isLoggedIn && !auth.user) {
     try {
       await auth.restoreUser()
     } catch {
-      return { name: 'login', query: { redirect: to.fullPath } }
+      if (to.meta.requiresAuth || to.meta.requiresAdmin) {
+        return { name: 'login', query: { redirect: to.fullPath } }
+      }
     }
   }
+
+  if (!to.meta.requiresAuth && !to.meta.requiresAdmin) return true
 
   if (!auth.isLoggedIn) {
     return { name: 'login', query: { redirect: to.fullPath } }

@@ -583,7 +583,7 @@ watch(selectedLanguage, (language, oldLanguage) => {
 }
 
 .submissions-container {
-  max-width: 1440px;
+  max-width: none;
   padding: 0;
 }
 

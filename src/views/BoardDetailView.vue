@@ -449,7 +449,7 @@ const removeComment = async (comment) => {
 
 <style scoped>
 .detail-page {
-  max-width: 760px;
+  max-width: none;
   padding: 0;
 }
 
@@ -462,7 +462,7 @@ const removeComment = async (comment) => {
 }
 
 .detail-article {
-  padding: var(--space-6);
+  padding: clamp(var(--space-6), 3vw, var(--space-10));
 }
 
 .detail-loading,

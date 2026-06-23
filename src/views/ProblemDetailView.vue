@@ -464,7 +464,7 @@ watch(
 
 .detail-container {
   padding: 0;
-  max-width: 1440px;
+  max-width: none;
 }
 
 .back-link {
@@ -481,7 +481,7 @@ watch(
 
 .solve-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(440px, 0.82fr);
+  grid-template-columns: minmax(520px, 1.08fr) minmax(520px, 0.92fr);
   gap: var(--space-6);
   align-items: start;
 }
