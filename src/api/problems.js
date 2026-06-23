@@ -1,11 +1,18 @@
 import api, { unwrapApiResponse } from '@/api'
 
-export const fetchProblems = async ({ cursor, size } = {}) => {
+export const fetchProblems = async ({ cursor, size, difficulty, algorithm } = {}) => {
   const params = {}
   if (cursor) params.cursor = cursor
   if (size) params.size = size
+  if (difficulty) params.difficulty = difficulty
+  if (algorithm) params.algorithm = algorithm
 
   const response = await api.get('/problems', { params })
+  return unwrapApiResponse(response)
+}
+
+export const fetchProblemAlgorithms = async () => {
+  const response = await api.get('/problems/algorithms')
   return unwrapApiResponse(response)
 }
 
