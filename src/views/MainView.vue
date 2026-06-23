@@ -7,7 +7,7 @@ import { useAuthStore } from '@/stores/auth'
 
 const auth = useAuthStore()
 
-const heroName = computed(() => auth.user?.nickname || 'Hero')
+const heroName = computed(() => auth.user?.nickname || 'Alt Learner')
 const isAdmin = computed(() => auth.user?.role === 'ADMIN')
 const streak = ref(null)
 const isLoadingStreak = ref(false)
