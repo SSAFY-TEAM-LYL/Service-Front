@@ -286,10 +286,14 @@ watch(
         <article class="statement">
           <header class="statement-header">
             <div>
-              <span class="problem-id">#{{ problem.id }}</span>
+              <span class="problem-id">#{{ problem.problemNumber || problem.id }}</span>
               <h1>{{ problem.title }}</h1>
             </div>
             <dl class="meta-list">
+              <div>
+                <dt>난이도</dt>
+                <dd>{{ problem.difficulty || '-' }}</dd>
+              </div>
               <div>
                 <dt>시간 제한</dt>
                 <dd>{{ formatTimeLimit(problem.timeLimitMs) }}</dd>

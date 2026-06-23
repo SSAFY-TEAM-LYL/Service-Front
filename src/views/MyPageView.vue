@@ -106,6 +106,10 @@ const handleWithdrawal = async () => {
         <div>
           <h1>{{ auth.user?.nickname || '사용자' }}</h1>
           <p>{{ auth.user?.email }}</p>
+          <div class="level-summary">
+            <span>Lv. {{ auth.user?.level || 1 }}</span>
+            <span>{{ auth.user?.xp || 0 }} XP</span>
+          </div>
         </div>
       </aside>
 
@@ -279,6 +283,26 @@ const handleWithdrawal = async () => {
 .section-header p {
   color: var(--color-text-muted);
   font-size: var(--font-sm);
+}
+
+.level-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+.level-summary span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 0 var(--space-3);
+  border: 2px solid var(--color-border);
+  background: var(--color-primary-light);
+  color: var(--color-primary-dark);
+  font-family: var(--font-mono);
+  font-size: var(--font-xs);
+  font-weight: 950;
 }
 
 .settings {

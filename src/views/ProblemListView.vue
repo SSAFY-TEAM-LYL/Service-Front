@@ -1,16 +1,39 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
-import { fetchProblems } from '@/api/problems'
+import { fetchProblemAlgorithms, fetchProblems } from '@/api/problems'
 
 const PAGE_SIZE = 20
 
 const problems = ref([])
+const algorithms = ref([])
 const loading = ref(true)
+const filterLoading = ref(false)
 const errorMessage = ref('')
 const currentPage = ref(1)
 const hasNextPage = ref(false)
 const pageCursors = ref([null])
+const selectedMode = ref('all')
+const selectedDifficulty = ref('bronze')
+const selectedAlgorithm = ref('')
+
+const difficultyOptions = [
+  { value: 'bronze', label: 'Bronze' },
+  { value: 'silver', label: 'Silver' },
+  { value: 'gold', label: 'Gold' },
+  { value: 'platinum', label: 'Platinum' },
+  { value: 'diamond', label: 'Diamond' },
+]
+
+const activeFilter = computed(() => {
+  if (selectedMode.value === 'difficulty') {
+    return { difficulty: selectedDifficulty.value }
+  }
+  if (selectedMode.value === 'algorithm') {
+    return { algorithm: selectedAlgorithm.value }
+  }
+  return {}
+})
 
 const pageNumbers = computed(() => {
   const pageCount = currentPage.value + (hasNextPage.value ? 1 : 0)
@@ -29,6 +52,8 @@ const formatTimeLimit = (value) => {
   return `${value}ms`
 }
 
+const displayProblemNumber = (problem) => problem.problemNumber || problem.id
+
 const getErrorMessage = (error) => {
   if (error.response?.status === 503) {
     return '문제 저장소에 연결할 수 없습니다.'
@@ -46,6 +71,7 @@ const loadProblems = async (page = 1) => {
     const response = await fetchProblems({
       cursor,
       size: PAGE_SIZE,
+      ...activeFilter.value,
     })
     problems.value = response.items || []
     currentPage.value = page
@@ -60,7 +86,49 @@ const loadProblems = async (page = 1) => {
   }
 }
 
-onMounted(loadProblems)
+const loadAlgorithms = async () => {
+  filterLoading.value = true
+  try {
+    const response = await fetchProblemAlgorithms()
+    algorithms.value = response || []
+    if (!selectedAlgorithm.value && algorithms.value.length > 0) {
+      selectedAlgorithm.value = algorithms.value[0].code
+    }
+  } catch {
+    algorithms.value = []
+  } finally {
+    filterLoading.value = false
+  }
+}
+
+const resetPagination = () => {
+  currentPage.value = 1
+  hasNextPage.value = false
+  pageCursors.value = [null]
+}
+
+const changeMode = async (mode) => {
+  selectedMode.value = mode
+  resetPagination()
+  await loadProblems(1)
+}
+
+const changeDifficulty = async (event) => {
+  selectedDifficulty.value = event.target.value
+  resetPagination()
+  await loadProblems(1)
+}
+
+const changeAlgorithm = async (event) => {
+  selectedAlgorithm.value = event.target.value
+  resetPagination()
+  await loadProblems(1)
+}
+
+onMounted(async () => {
+  await loadAlgorithms()
+  await loadProblems()
+})
 </script>
 
 <template>
@@ -69,6 +137,58 @@ onMounted(loadProblems)
       <div>
         <h1 class="problem-title">문제</h1>
         <p class="problem-desc">공개된 알고리즘 문제를 확인하세요.</p>
+      </div>
+    </div>
+
+    <div class="problem-filters">
+      <div class="filter-tabs" aria-label="문제 필터 유형">
+        <button
+          type="button"
+          class="filter-tab"
+          :class="{ active: selectedMode === 'all' }"
+          @click="changeMode('all')"
+        >
+          전체 문제
+        </button>
+        <button
+          type="button"
+          class="filter-tab"
+          :class="{ active: selectedMode === 'difficulty' }"
+          @click="changeMode('difficulty')"
+        >
+          난이도별
+        </button>
+        <button
+          type="button"
+          class="filter-tab"
+          :class="{ active: selectedMode === 'algorithm' }"
+          @click="changeMode('algorithm')"
+        >
+          알고리즘별
+        </button>
+      </div>
+
+      <div v-if="selectedMode === 'difficulty'" class="filter-control">
+        <label for="difficulty-filter">난이도</label>
+        <select id="difficulty-filter" :value="selectedDifficulty" @change="changeDifficulty">
+          <option v-for="difficulty in difficultyOptions" :key="difficulty.value" :value="difficulty.value">
+            {{ difficulty.label }}
+          </option>
+        </select>
+      </div>
+
+      <div v-if="selectedMode === 'algorithm'" class="filter-control">
+        <label for="algorithm-filter">알고리즘</label>
+        <select
+          id="algorithm-filter"
+          :value="selectedAlgorithm"
+          :disabled="filterLoading || algorithms.length === 0"
+          @change="changeAlgorithm"
+        >
+          <option v-for="algorithm in algorithms" :key="algorithm.code" :value="algorithm.code">
+            {{ algorithm.label }}
+          </option>
+        </select>
       </div>
     </div>
 
@@ -86,6 +206,7 @@ onMounted(loadProblems)
         <div class="table-header">
           <span class="col-id">#</span>
           <span class="col-title">제목</span>
+          <span class="col-difficulty">난이도</span>
           <span class="col-limit">시간 제한</span>
           <span class="col-date">등록일</span>
         </div>
@@ -96,8 +217,9 @@ onMounted(loadProblems)
           :to="{ name: 'problem-detail', params: { problemId: problem.id } }"
           class="table-row"
         >
-          <span class="col-id">{{ problem.id }}</span>
+          <span class="col-id">{{ displayProblemNumber(problem) }}</span>
           <span class="col-title">{{ problem.title }}</span>
+          <span class="col-difficulty">{{ problem.difficulty || '-' }}</span>
           <span class="col-limit">{{ formatTimeLimit(problem.timeLimitMs) }}</span>
           <span class="col-date">{{ formatDate(problem.createdAt) }}</span>
         </RouterLink>
@@ -165,6 +287,59 @@ onMounted(loadProblems)
   font-size: var(--font-sm);
 }
 
+.problem-filters {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-bottom: var(--space-5);
+}
+
+.filter-tabs {
+  display: inline-flex;
+  border: 3px solid var(--color-border);
+  background: var(--color-bg);
+}
+
+.filter-tab {
+  min-height: 40px;
+  padding: 0 var(--space-4);
+  border: 0;
+  border-right: 2px solid var(--color-border-light);
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: var(--font-sm);
+  font-weight: 900;
+}
+
+.filter-tab:last-child {
+  border-right: 0;
+}
+
+.filter-tab.active,
+.filter-tab:hover {
+  color: #fff;
+  background: var(--color-primary);
+}
+
+.filter-control {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-text-secondary);
+  font-size: var(--font-sm);
+  font-weight: 800;
+}
+
+.filter-control select {
+  min-width: 180px;
+  height: 40px;
+  border: 3px solid var(--color-border);
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-weight: 800;
+}
+
 .problem-table {
   border: 3px solid var(--color-border);
   background: var(--color-bg);
@@ -174,7 +349,7 @@ onMounted(loadProblems)
 .table-header,
 .table-row {
   display: grid;
-  grid-template-columns: 88px minmax(0, 1fr) 120px 120px;
+  grid-template-columns: 88px minmax(0, 1fr) 120px 120px 120px;
   align-items: center;
   gap: var(--space-3);
   min-height: 52px;
@@ -208,6 +383,7 @@ onMounted(loadProblems)
 }
 
 .col-id,
+.col-difficulty,
 .col-limit,
 .col-date {
   color: var(--color-text-secondary);
@@ -271,6 +447,29 @@ onMounted(loadProblems)
     padding: var(--space-8) var(--space-4);
   }
 
+  .problem-filters {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .filter-tabs {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .filter-tab {
+    padding: 0 var(--space-2);
+  }
+
+  .filter-control {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .filter-control select {
+    width: 100%;
+  }
+
   .table-header {
     display: none;
   }
@@ -286,6 +485,7 @@ onMounted(loadProblems)
   }
 
   .col-limit,
+  .col-difficulty,
   .col-date {
     order: 3;
   }
