@@ -23,6 +23,7 @@ const pageTitle = computed(() => route.meta?.title || routeTitleMap[route.name] 
 const mainNavItems = [
   { to: '/', label: '대시보드', icon: '▦' },
   { to: '/problems', label: '문제풀기', icon: '</>' },
+  { to: '/ranking', label: '랭킹', icon: '★' },
   { to: '/board', label: '게시판', icon: '□' },
 ]
 
@@ -31,6 +32,7 @@ const routeTitleMap = {
   problems: '문제풀기',
   'problem-detail': '문제풀기',
   'problem-submissions': '제출내역',
+  ranking: '랭킹',
   board: '게시판',
   'board-write': '글쓰기',
   'board-detail': '게시글',

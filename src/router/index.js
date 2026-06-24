@@ -58,6 +58,11 @@ const router = createRouter({
       meta: { requiresAuth: true },
     },
     {
+      path: '/ranking',
+      name: 'ranking',
+      component: () => import('@/views/RankingView.vue'),
+    },
+    {
       path: '/admin/problem-publications',
       name: 'admin-problem-publications',
       component: () => import('@/views/AdminProblemPublicationsView.vue'),
