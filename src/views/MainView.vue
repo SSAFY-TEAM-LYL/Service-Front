@@ -1,18 +1,28 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
+import { fetchMySolvedStats } from '@/api/members'
 import { fetchMyStreak } from '@/api/streaks'
 import DailyStreakGrass from '@/components/DailyStreakGrass.vue'
 import { useAuthStore } from '@/stores/auth'
 
 const auth = useAuthStore()
 const XP_PER_LEVEL = 50
+const DIFFICULTY_COLORS = {
+  bronze: '#b45309',
+  silver: '#496982',
+  gold: '#f59e0b',
+  platinum: '#14b8a6',
+  diamond: '#0ea5e9',
+}
 
 const heroName = computed(() => auth.user?.nickname || '사용자')
-const isAdmin = computed(() => auth.user?.role === 'ADMIN')
 const streak = ref(null)
 const isLoadingStreak = ref(false)
 const streakError = ref('')
+const solvedStats = ref(null)
+const isLoadingSolvedStats = ref(false)
+const solvedStatsError = ref('')
 
 const currentXp = computed(() => Number(auth.user?.xp) || 0)
 const currentLevel = computed(() => Number(auth.user?.level) || Math.floor(currentXp.value / XP_PER_LEVEL) + 1)
@@ -24,57 +34,82 @@ const xpStatusMessage = computed(() => {
   return `현재 경험치 : ${currentXp.value} XP, Lv. ${currentLevel.value + 1}까지 ${nextLevelXp.value} XP 남았습니다! 화이팅!`
 })
 
-const overviewCards = computed(() => {
-  const cards = [
-    {
-      label: 'PROBLEMS',
-      value: '문제풀기',
-      note: '공개 문제 목록',
-      tone: 'green',
-      to: '/problems',
-      icon: '◎',
-    },
-    {
-      label: 'CODE RUN',
-      value: '제출/채점',
-      note: '문제 상세에서 실행',
-      tone: 'blue',
-      to: '/problems',
-      icon: '</>',
-    },
-    {
-      label: 'BOARD',
-      value: '게시판',
-      note: '공지·질문·자유글',
-      tone: 'purple',
-      to: '/board',
-      icon: '□',
-    },
-    {
-      label: 'PROFILE',
-      value: '내 정보',
-      note: '회원정보 관리',
-      tone: 'gold',
-      to: '/mypage',
-      icon: '◆',
-    },
-  ]
-
-  if (isAdmin.value) {
-    return [
-      ...cards,
-      {
-        label: 'ADMIN',
-        value: '문제 공개',
-        note: '관리자 도구',
-        tone: 'red',
-        to: '/admin/problem-publications',
-        icon: '▣',
-      },
-    ]
+const avatarInitial = computed(() => heroName.value.trim().slice(0, 1).toUpperCase() || 'U')
+const solvedProblemCount = computed(() => Number(solvedStats.value?.totalSolvedCount) || 0)
+const difficultyStats = computed(() => {
+  return (solvedStats.value?.difficulties || []).map((item) => ({
+    key: item.tier,
+    label: item.label,
+    solved: Number(item.solvedCount) || 0,
+    percent: Number(item.percent) || 0,
+    color: DIFFICULTY_COLORS[item.tier] || 'var(--primary)',
+    levels: item.levels || [],
+  }))
+})
+const algorithmStats = computed(() => {
+  return (solvedStats.value?.algorithms || []).map((item) => ({
+    code: item.code,
+    label: item.label,
+    solved: Number(item.solvedCount) || 0,
+    percent: Number(item.percent) || 0,
+  }))
+})
+const maxAlgorithmSolved = computed(() => Math.max(1, ...algorithmStats.value.map((item) => item.solved)))
+const topAlgorithmStats = computed(() => {
+  return [...algorithmStats.value]
+    .sort((a, b) => b.solved - a.solved)
+    .slice(0, 6)
+})
+const donutGradient = computed(() => {
+  if (solvedProblemCount.value <= 0) {
+    return 'conic-gradient(var(--line-soft) 0% 100%)'
   }
+  let cursor = 0
+  const segments = difficultyStats.value
+    .filter((item) => item.percent > 0)
+    .map((item) => {
+      const start = cursor
+      cursor += item.percent
+      return `${item.color} ${start}% ${cursor}%`
+    })
 
-  return cards
+  return `conic-gradient(${segments.join(', ')})`
+})
+
+const radarPoints = computed(() => {
+  const center = 50
+  const radius = 41
+  if (topAlgorithmStats.value.length === 0) {
+    return ''
+  }
+  return topAlgorithmStats.value
+    .map((item, index) => {
+      const angle = -Math.PI / 2 + (Math.PI * 2 * index) / topAlgorithmStats.value.length
+      const distance = (item.solved / maxAlgorithmSolved.value) * radius
+      const x = center + Math.cos(angle) * distance
+      const y = center + Math.sin(angle) * distance
+      return `${x},${y}`
+    })
+    .join(' ')
+})
+
+const radarAxis = computed(() => {
+  const center = 50
+  const radius = 43
+  return topAlgorithmStats.value.map((item, index) => {
+    const angle = -Math.PI / 2 + (Math.PI * 2 * index) / topAlgorithmStats.value.length
+    return {
+      ...item,
+      lineX: center + Math.cos(angle) * radius,
+      lineY: center + Math.sin(angle) * radius,
+      labelX: center + Math.cos(angle) * 49,
+      labelY: center + Math.sin(angle) * 49,
+    }
+  })
+})
+
+const visibleAlgorithmStats = computed(() => {
+  return [...algorithmStats.value].sort((a, b) => b.solved - a.solved || a.label.localeCompare(b.label))
 })
 
 const loadStreak = async () => {
@@ -94,14 +129,35 @@ const loadStreak = async () => {
   }
 }
 
+const loadSolvedStats = async () => {
+  if (!auth.isLoggedIn) {
+    solvedStats.value = null
+    return
+  }
+
+  isLoadingSolvedStats.value = true
+  solvedStatsError.value = ''
+  try {
+    solvedStats.value = await fetchMySolvedStats()
+  } catch (error) {
+    solvedStatsError.value = error.response?.data?.message || '푼 문제 통계를 불러오지 못했습니다.'
+  } finally {
+    isLoadingSolvedStats.value = false
+  }
+}
+
 watch(
   () => auth.isLoggedIn,
   () => {
     loadStreak()
+    loadSolvedStats()
   },
 )
 
-onMounted(loadStreak)
+onMounted(() => {
+  loadStreak()
+  loadSolvedStats()
+})
 </script>
 
 <template>
@@ -142,23 +198,128 @@ onMounted(loadStreak)
     </section>
 
     <section class="section-heading">
-      <strong>OVERVIEW</strong>
+      <strong>SOLVED STATS</strong>
       <span />
     </section>
 
-    <section class="overview-grid" aria-label="서비스 기능">
-      <RouterLink
-        v-for="card in overviewCards"
-        :key="card.label"
-        :to="card.to"
-        class="overview-card"
-        :class="`tone-${card.tone}`"
-      >
-        <span>{{ card.label }}</span>
-        <i>{{ card.icon }}</i>
-        <strong>{{ card.value }}</strong>
-        <small>{{ card.note }}</small>
-      </RouterLink>
+    <section
+      v-if="isLoadingSolvedStats || solvedStatsError"
+      class="dashboard-panel stats-state"
+      aria-live="polite"
+    >
+      <p v-if="isLoadingSolvedStats">푼 문제 통계를 불러오는 중입니다.</p>
+      <p v-else>{{ solvedStatsError }}</p>
+    </section>
+
+    <section v-else class="solved-stats-grid" aria-label="푼 문제 통계">
+      <article class="dashboard-panel stats-panel">
+        <header class="stats-header">
+          <span>◎ 난이도 분포</span>
+          <strong>{{ solvedProblemCount }}문제 해결</strong>
+          <RouterLink to="/problems" class="btn btn-sm btn-outline">자세히</RouterLink>
+        </header>
+
+        <div class="stats-content difficulty-layout">
+          <div class="donut-chart" :style="{ background: donutGradient }" aria-hidden="true">
+            <div class="donut-hole">
+              <img
+                v-if="auth.user?.profileImageUrl"
+                :src="auth.user.profileImageUrl"
+                :alt="`${heroName} 프로필 이미지`"
+              />
+              <span v-else>{{ avatarInitial }}</span>
+            </div>
+          </div>
+
+          <div class="stats-table-wrap">
+            <table class="stats-table">
+              <thead>
+                <tr>
+                  <th>레벨</th>
+                  <th>문제</th>
+                  <th>비율</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="item in difficultyStats" :key="item.key">
+                  <td :style="{ color: item.color }">
+                    {{ item.label }}
+                    <small class="difficulty-levels">
+                      {{ item.levels.map((level) => `${level.level} ${level.solvedCount}`).join(' · ') }}
+                    </small>
+                  </td>
+                  <td>{{ item.solved }}</td>
+                  <td>{{ item.percent.toFixed(1) }}%</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </article>
+
+      <article class="dashboard-panel stats-panel">
+        <header class="stats-header">
+          <span>◇ 알고리즘 유형</span>
+          <strong>자주 푼 태그</strong>
+          <RouterLink to="/problems" class="btn btn-sm btn-outline">더 보기</RouterLink>
+        </header>
+
+        <div class="stats-content algorithm-layout">
+          <div class="radar-chart" aria-hidden="true">
+            <svg viewBox="0 0 100 100" role="img">
+              <circle cx="50" cy="50" r="12" />
+              <circle cx="50" cy="50" r="24" />
+              <circle cx="50" cy="50" r="36" />
+              <line
+                v-for="axis in radarAxis"
+                :key="axis.code"
+                x1="50"
+                y1="50"
+                :x2="axis.lineX"
+                :y2="axis.lineY"
+              />
+              <polygon :points="radarPoints" />
+              <text
+                v-for="axis in radarAxis"
+                :key="`${axis.code}-label`"
+                :x="axis.labelX"
+                :y="axis.labelY"
+              >
+                {{ axis.code }}
+              </text>
+            </svg>
+            <div class="radar-avatar">
+              <img
+                v-if="auth.user?.profileImageUrl"
+                :src="auth.user.profileImageUrl"
+                :alt="`${heroName} 프로필 이미지`"
+              />
+              <span v-else>{{ avatarInitial }}</span>
+            </div>
+          </div>
+
+          <div class="stats-table-wrap">
+            <table class="stats-table algorithm-table">
+              <thead>
+                <tr>
+                  <th>태그</th>
+                  <th>문제</th>
+                  <th>비율</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="item in visibleAlgorithmStats" :key="item.code">
+                  <td>#{{ item.label }}</td>
+                  <td>
+                    <strong>{{ item.solved }}</strong>
+                  </td>
+                  <td>{{ item.percent.toFixed(1) }}%</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </article>
     </section>
 
     <section class="dashboard-columns">
@@ -190,8 +351,7 @@ onMounted(loadStreak)
 }
 
 .dashboard-panel,
-.dashboard-card,
-.overview-card {
+.dashboard-card {
   border: 3px solid var(--primary-line);
   background: var(--surface-plain);
   box-shadow: var(--pixel-shadow-muted);
@@ -342,81 +502,201 @@ onMounted(loadStreak)
   background: var(--line-soft);
 }
 
-.overview-grid {
+.solved-stats-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 16px;
+  gap: 22px;
 }
 
-.overview-card {
-  display: grid;
-  min-height: 150px;
-  padding: 18px;
-  transition:
-    transform var(--transition-fast),
-    box-shadow var(--transition-fast);
+.stats-panel {
+  overflow: hidden;
 }
 
-.overview-card:hover {
-  transform: translate(-2px, -2px);
-}
-
-.overview-card span,
-.overview-card small {
+.stats-state {
+  padding: 22px;
   color: var(--muted);
   font-family: var(--font-mono);
+  font-weight: 900;
+}
+
+.stats-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px 14px;
+  align-items: center;
+  padding: 18px 20px;
+  border-bottom: 3px solid var(--line-soft);
+  background: var(--surface-panel);
+}
+
+.stats-header span {
+  grid-column: 1 / -1;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+.stats-header strong {
+  color: var(--ink);
+  font-size: clamp(1.25rem, 2vw, 1.8rem);
+  font-weight: 950;
+}
+
+.stats-header .btn {
+  justify-self: end;
+}
+
+.stats-content {
+  display: grid;
+  grid-template-columns: minmax(230px, 0.65fr) minmax(0, 1.35fr);
+  gap: clamp(20px, 4vw, 52px);
+  align-items: center;
+  padding: clamp(22px, 3vw, 34px);
+}
+
+.donut-chart {
+  position: relative;
+  justify-self: center;
+  width: min(100%, 280px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ink) 8%, transparent);
+}
+
+.donut-chart::before {
+  position: absolute;
+  inset: 26%;
+  border-radius: 50%;
+  background: var(--surface-plain);
+  content: "";
+}
+
+.donut-hole,
+.radar-avatar {
+  position: absolute;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border: 3px solid var(--primary-line);
+  border-radius: 50%;
+  background: var(--primary);
+  color: #fff;
+  font-family: var(--font-mono);
+  font-weight: 950;
+}
+
+.donut-hole {
+  inset: 42%;
+  box-shadow: 3px 3px 0 var(--line-soft);
+}
+
+.donut-hole img,
+.radar-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.stats-table {
+  width: 100%;
+  border-collapse: collapse;
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: 0.84rem;
+}
+
+.stats-table th,
+.stats-table td {
+  padding: 10px 12px;
+  border-bottom: 2px solid var(--line-soft);
+  text-align: right;
+  vertical-align: middle;
+}
+
+.stats-table th:first-child,
+.stats-table td:first-child {
+  text-align: left;
+}
+
+.stats-table th {
+  color: var(--ink);
+  font-size: 0.74rem;
+  font-weight: 950;
+}
+
+.stats-table td {
+  color: var(--muted);
   font-weight: 850;
 }
 
-.overview-card span {
-  font-size: 0.72rem;
-  letter-spacing: 0.14em;
-}
-
-.overview-card i {
-  justify-self: end;
-  color: currentColor;
-  font-family: var(--font-mono);
-  font-style: normal;
+.stats-table td:first-child,
+.stats-table td:nth-child(2) {
+  color: var(--ink);
   font-weight: 950;
 }
 
-.overview-card strong {
-  align-self: end;
-  color: currentColor;
+.difficulty-levels {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
+.algorithm-layout {
+  grid-template-columns: minmax(260px, 0.75fr) minmax(0, 1.25fr);
+}
+
+.radar-chart {
+  position: relative;
+  justify-self: center;
+  width: min(100%, 310px);
+  aspect-ratio: 1;
+}
+
+.radar-chart svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.radar-chart circle {
+  fill: none;
+  stroke: var(--line-soft);
+  stroke-dasharray: 3 3;
+  stroke-width: 0.8;
+}
+
+.radar-chart line {
+  stroke: var(--line-soft);
+  stroke-dasharray: 3 3;
+  stroke-width: 0.7;
+}
+
+.radar-chart polygon {
+  fill: color-mix(in srgb, var(--gold) 24%, transparent);
+  stroke: var(--gold);
+  stroke-linejoin: round;
+  stroke-width: 1.3;
+}
+
+.radar-chart text {
+  fill: var(--ink);
   font-family: var(--font-mono);
-  font-size: clamp(1.3rem, 2vw, 1.8rem);
-  font-weight: 950;
+  font-size: 4px;
+  font-weight: 850;
+  text-anchor: middle;
 }
 
-.overview-card.tone-green {
-  border-color: var(--overview-green-border, color-mix(in srgb, var(--green) 45%, var(--primary-line)));
-  color: var(--overview-green, var(--green));
-  box-shadow: 5px 5px 0 var(--overview-green-shadow, var(--green-dark));
-}
-
-.overview-card.tone-blue {
-  border-color: var(--overview-blue-border, color-mix(in srgb, var(--blue) 45%, var(--primary-line)));
-  color: var(--overview-blue, var(--blue));
-  box-shadow: 5px 5px 0 var(--overview-blue-shadow, #1d4ed8);
-}
-
-.overview-card.tone-purple {
-  border-color: var(--overview-purple-border, color-mix(in srgb, var(--primary) 45%, var(--primary-line)));
-  color: var(--overview-purple, var(--primary));
-  box-shadow: 5px 5px 0 var(--overview-purple-shadow, var(--primary-shadow));
-}
-
-.overview-card.tone-gold {
-  border-color: var(--overview-gold-border, color-mix(in srgb, var(--gold) 45%, var(--primary-line)));
-  color: var(--overview-gold, var(--gold));
-  box-shadow: 5px 5px 0 var(--overview-gold-shadow, var(--gold-dark));
-}
-
-.overview-card.tone-red {
-  border-color: var(--overview-red-border, color-mix(in srgb, var(--red) 45%, var(--primary-line)));
-  color: var(--overview-red, var(--red));
-  box-shadow: 5px 5px 0 var(--overview-red-shadow, var(--red-dark));
+.radar-avatar {
+  top: 50%;
+  left: 50%;
+  width: 42px;
+  height: 42px;
+  transform: translate(-50%, -50%);
+  box-shadow: 2px 2px 0 var(--line-soft);
 }
 
 .dashboard-columns {
@@ -442,23 +722,39 @@ onMounted(loadStreak)
 }
 
 @media (max-width: 1120px) {
-  .overview-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
   .player-summary {
     grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .stats-content,
+  .algorithm-layout {
+    grid-template-columns: 1fr;
   }
 }
 
 @media (max-width: 720px) {
-  .overview-grid,
   .dashboard-columns {
     grid-template-columns: 1fr;
   }
 
   .player-summary {
     grid-template-columns: 1fr;
+  }
+
+  .stats-header {
+    grid-template-columns: 1fr;
+  }
+
+  .stats-header .btn {
+    justify-self: start;
+  }
+
+  .stats-table-wrap {
+    overflow-x: auto;
+  }
+
+  .stats-table {
+    min-width: 520px;
   }
 }
 </style>

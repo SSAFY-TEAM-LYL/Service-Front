@@ -4,6 +4,10 @@ export async function fetchMyProfile() {
   return unwrapApiResponse(await api.get('/members/me'))
 }
 
+export async function fetchMySolvedStats() {
+  return unwrapApiResponse(await api.get('/members/me/solved-stats'))
+}
+
 export async function fetchMemberRankings({ page, size } = {}) {
   return unwrapApiResponse(
     await api.get('/members/rankings', {
