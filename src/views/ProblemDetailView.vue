@@ -170,18 +170,20 @@ const loadProblem = async () => {
 const loadRecentSubmissions = async () => {
   if (!auth.isLoggedIn) {
     recentSubmissions.value = []
+    latestSubmission.value = null
     return
   }
   recentLoading.value = true
   try {
-    const data = await fetchProblemSubmissions(problemId.value, { size: 5 })
+    const data = await fetchProblemSubmissions(problemId.value, { size: 5, mine: true })
     recentSubmissions.value = data.items || []
-    latestSubmission.value = recentSubmissions.value[0] || latestSubmission.value
+    latestSubmission.value = recentSubmissions.value[0] || null
     if (latestSubmission.value && isInProgress(latestSubmission.value.status)) {
       startPolling(latestSubmission.value.id)
     }
   } catch {
     recentSubmissions.value = []
+    latestSubmission.value = null
   } finally {
     recentLoading.value = false
   }
