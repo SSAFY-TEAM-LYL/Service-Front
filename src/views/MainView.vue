@@ -1,7 +1,9 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
+import { fetchBoardPosts } from '@/api/board'
 import { fetchMySolvedStats } from '@/api/members'
+import { fetchProblems } from '@/api/problems'
 import { fetchMyStreak } from '@/api/streaks'
 import DailyStreakGrass from '@/components/DailyStreakGrass.vue'
 import { useAuthStore } from '@/stores/auth'
@@ -23,6 +25,10 @@ const streakError = ref('')
 const solvedStats = ref(null)
 const isLoadingSolvedStats = ref(false)
 const solvedStatsError = ref('')
+const recentProblems = ref([])
+const popularPosts = ref([])
+const isLoadingDashboardLists = ref(false)
+const dashboardListsError = ref('')
 
 const currentXp = computed(() => Number(auth.user?.xp) || 0)
 const currentLevel = computed(() => Number(auth.user?.level) || Math.floor(currentXp.value / XP_PER_LEVEL) + 1)
@@ -34,7 +40,6 @@ const xpStatusMessage = computed(() => {
   return `현재 경험치 : ${currentXp.value} XP, Lv. ${currentLevel.value + 1}까지 ${nextLevelXp.value} XP 남았습니다! 화이팅!`
 })
 
-const avatarInitial = computed(() => heroName.value.trim().slice(0, 1).toUpperCase() || 'U')
 const solvedProblemCount = computed(() => Number(solvedStats.value?.totalSolvedCount) || 0)
 const difficultyStats = computed(() => {
   return (solvedStats.value?.difficulties || []).map((item) => ({
@@ -52,13 +57,8 @@ const algorithmStats = computed(() => {
     label: item.label,
     solved: Number(item.solvedCount) || 0,
     percent: Number(item.percent) || 0,
+    barPercent: Math.min(100, Math.max(0, Number(item.percent) || 0)),
   }))
-})
-const maxAlgorithmSolved = computed(() => Math.max(1, ...algorithmStats.value.map((item) => item.solved)))
-const topAlgorithmStats = computed(() => {
-  return [...algorithmStats.value]
-    .sort((a, b) => b.solved - a.solved)
-    .slice(0, 6)
 })
 const donutGradient = computed(() => {
   if (solvedProblemCount.value <= 0) {
@@ -74,38 +74,6 @@ const donutGradient = computed(() => {
     })
 
   return `conic-gradient(${segments.join(', ')})`
-})
-
-const radarPoints = computed(() => {
-  const center = 50
-  const radius = 41
-  if (topAlgorithmStats.value.length === 0) {
-    return ''
-  }
-  return topAlgorithmStats.value
-    .map((item, index) => {
-      const angle = -Math.PI / 2 + (Math.PI * 2 * index) / topAlgorithmStats.value.length
-      const distance = (item.solved / maxAlgorithmSolved.value) * radius
-      const x = center + Math.cos(angle) * distance
-      const y = center + Math.sin(angle) * distance
-      return `${x},${y}`
-    })
-    .join(' ')
-})
-
-const radarAxis = computed(() => {
-  const center = 50
-  const radius = 43
-  return topAlgorithmStats.value.map((item, index) => {
-    const angle = -Math.PI / 2 + (Math.PI * 2 * index) / topAlgorithmStats.value.length
-    return {
-      ...item,
-      lineX: center + Math.cos(angle) * radius,
-      lineY: center + Math.sin(angle) * radius,
-      labelX: center + Math.cos(angle) * 49,
-      labelY: center + Math.sin(angle) * 49,
-    }
-  })
 })
 
 const visibleAlgorithmStats = computed(() => {
@@ -146,6 +114,25 @@ const loadSolvedStats = async () => {
   }
 }
 
+const loadDashboardLists = async () => {
+  isLoadingDashboardLists.value = true
+  dashboardListsError.value = ''
+  try {
+    const [problemData, boardData] = await Promise.all([
+      fetchProblems({ size: 3 }),
+      fetchBoardPosts({ size: 20 }),
+    ])
+    recentProblems.value = problemData.items || []
+    popularPosts.value = [...(boardData.items || [])]
+      .sort((a, b) => Number(b.views) - Number(a.views) || b.id - a.id)
+      .slice(0, 3)
+  } catch (error) {
+    dashboardListsError.value = error.response?.data?.message || '대시보드 목록을 불러오지 못했습니다.'
+  } finally {
+    isLoadingDashboardLists.value = false
+  }
+}
+
 watch(
   () => auth.isLoggedIn,
   () => {
@@ -157,6 +144,7 @@ watch(
 onMounted(() => {
   loadStreak()
   loadSolvedStats()
+  loadDashboardLists()
 })
 </script>
 
@@ -216,18 +204,13 @@ onMounted(() => {
         <header class="stats-header">
           <span>◎ 난이도 분포</span>
           <strong>{{ solvedProblemCount }}문제 해결</strong>
-          <RouterLink to="/problems" class="btn btn-sm btn-outline">자세히</RouterLink>
         </header>
 
         <div class="stats-content difficulty-layout">
           <div class="donut-chart" :style="{ background: donutGradient }" aria-hidden="true">
             <div class="donut-hole">
-              <img
-                v-if="auth.user?.profileImageUrl"
-                :src="auth.user.profileImageUrl"
-                :alt="`${heroName} 프로필 이미지`"
-              />
-              <span v-else>{{ avatarInitial }}</span>
+              <strong>{{ solvedProblemCount }}</strong>
+              <span>solved</span>
             </div>
           </div>
 
@@ -261,62 +244,17 @@ onMounted(() => {
         <header class="stats-header">
           <span>◇ 알고리즘 유형</span>
           <strong>자주 푼 태그</strong>
-          <RouterLink to="/problems" class="btn btn-sm btn-outline">더 보기</RouterLink>
         </header>
 
-        <div class="stats-content algorithm-layout">
-          <div class="radar-chart" aria-hidden="true">
-            <svg viewBox="0 0 100 100" role="img">
-              <circle cx="50" cy="50" r="12" />
-              <circle cx="50" cy="50" r="24" />
-              <circle cx="50" cy="50" r="36" />
-              <line
-                v-for="axis in radarAxis"
-                :key="axis.code"
-                x1="50"
-                y1="50"
-                :x2="axis.lineX"
-                :y2="axis.lineY"
-              />
-              <polygon :points="radarPoints" />
-              <text
-                v-for="axis in radarAxis"
-                :key="`${axis.code}-label`"
-                :x="axis.labelX"
-                :y="axis.labelY"
-              >
-                {{ axis.code }}
-              </text>
-            </svg>
-            <div class="radar-avatar">
-              <img
-                v-if="auth.user?.profileImageUrl"
-                :src="auth.user.profileImageUrl"
-                :alt="`${heroName} 프로필 이미지`"
-              />
-              <span v-else>{{ avatarInitial }}</span>
+        <div class="algorithm-bars" aria-label="알고리즘별 풀이 비율">
+          <div v-for="item in visibleAlgorithmStats" :key="item.code" class="algorithm-bar-row">
+            <div class="algorithm-bar-meta">
+              <strong>#{{ item.label }}</strong>
+              <span>{{ item.solved }}문제 · {{ item.percent.toFixed(1) }}%</span>
             </div>
-          </div>
-
-          <div class="stats-table-wrap">
-            <table class="stats-table algorithm-table">
-              <thead>
-                <tr>
-                  <th>태그</th>
-                  <th>문제</th>
-                  <th>비율</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="item in visibleAlgorithmStats" :key="item.code">
-                  <td>#{{ item.label }}</td>
-                  <td>
-                    <strong>{{ item.solved }}</strong>
-                  </td>
-                  <td>{{ item.percent.toFixed(1) }}%</td>
-                </tr>
-              </tbody>
-            </table>
+            <div class="algorithm-bar-track" aria-hidden="true">
+              <span :style="{ width: `${item.barPercent}%` }" />
+            </div>
           </div>
         </div>
       </article>
@@ -324,21 +262,33 @@ onMounted(() => {
 
     <section class="dashboard-columns">
       <article class="dashboard-card">
-        <header>▸ 문제 풀이 플로우</header>
-        <ol>
-          <li>문제 목록에서 공개 문제를 선택합니다.</li>
-          <li>문제 상세에서 언어와 템플릿 코드를 선택합니다.</li>
-          <li>제출 후 채점 결과와 최근 제출을 확인합니다.</li>
+        <header>▸ 최근 등록 문제 TOP 3</header>
+        <p v-if="dashboardListsError" class="dashboard-list-state">{{ dashboardListsError }}</p>
+        <p v-else-if="isLoadingDashboardLists" class="dashboard-list-state">문제를 불러오는 중입니다.</p>
+        <ol v-else-if="recentProblems.length > 0" class="dashboard-link-list">
+          <li v-for="problem in recentProblems" :key="problem.id">
+            <RouterLink :to="{ name: 'problem-detail', params: { problemId: problem.id } }">
+              <span>{{ problem.problemNumber ? `${problem.problemNumber}. ` : '' }}{{ problem.title }}</span>
+              <small>{{ problem.difficulty }}</small>
+            </RouterLink>
+          </li>
         </ol>
+        <p v-else class="dashboard-list-state">아직 공개된 문제가 없습니다.</p>
       </article>
 
       <article class="dashboard-card">
-        <header>▸ 커뮤니티 플로우</header>
-        <ol>
-          <li>공지, 자유, 질문 카테고리를 탐색합니다.</li>
-          <li>로그인 후 게시글을 작성하고 수정할 수 있습니다.</li>
-          <li>게시글 상세에서 내용을 확인합니다.</li>
+        <header>▸ 조회수 높은 게시글 TOP 3</header>
+        <p v-if="dashboardListsError" class="dashboard-list-state">{{ dashboardListsError }}</p>
+        <p v-else-if="isLoadingDashboardLists" class="dashboard-list-state">게시글을 불러오는 중입니다.</p>
+        <ol v-else-if="popularPosts.length > 0" class="dashboard-link-list">
+          <li v-for="post in popularPosts" :key="post.id">
+            <RouterLink :to="{ name: 'board-detail', params: { id: post.id } }">
+              <span>{{ post.title }}</span>
+              <small>조회 {{ post.views }}</small>
+            </RouterLink>
+          </li>
         </ol>
+        <p v-else class="dashboard-list-state">아직 게시글이 없습니다.</p>
       </article>
     </section>
   </div>
@@ -542,10 +492,6 @@ onMounted(() => {
   font-weight: 950;
 }
 
-.stats-header .btn {
-  justify-self: end;
-}
-
 .stats-content {
   display: grid;
   grid-template-columns: minmax(230px, 0.65fr) minmax(0, 1.35fr);
@@ -571,8 +517,7 @@ onMounted(() => {
   content: "";
 }
 
-.donut-hole,
-.radar-avatar {
+.donut-hole {
   position: absolute;
   z-index: 1;
   display: grid;
@@ -587,15 +532,21 @@ onMounted(() => {
 }
 
 .donut-hole {
-  inset: 42%;
+  inset: 38%;
   box-shadow: 3px 3px 0 var(--line-soft);
+  line-height: 1;
 }
 
-.donut-hole img,
-.radar-avatar img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+.donut-hole strong {
+  align-self: end;
+  font-size: 1.35rem;
+}
+
+.donut-hole span {
+  align-self: start;
+  color: color-mix(in srgb, #fff 82%, var(--primary-line));
+  font-size: 0.56rem;
+  text-transform: uppercase;
 }
 
 .stats-table {
@@ -644,59 +595,49 @@ onMounted(() => {
   font-weight: 800;
 }
 
-.algorithm-layout {
-  grid-template-columns: minmax(260px, 0.75fr) minmax(0, 1.25fr);
+.algorithm-bars {
+  display: grid;
+  gap: 14px;
+  padding: clamp(22px, 3vw, 34px);
 }
 
-.radar-chart {
-  position: relative;
-  justify-self: center;
-  width: min(100%, 310px);
-  aspect-ratio: 1;
+.algorithm-bar-row {
+  display: grid;
+  gap: 8px;
 }
 
-.radar-chart svg {
-  display: block;
-  width: 100%;
-  height: 100%;
-  overflow: visible;
-}
-
-.radar-chart circle {
-  fill: none;
-  stroke: var(--line-soft);
-  stroke-dasharray: 3 3;
-  stroke-width: 0.8;
-}
-
-.radar-chart line {
-  stroke: var(--line-soft);
-  stroke-dasharray: 3 3;
-  stroke-width: 0.7;
-}
-
-.radar-chart polygon {
-  fill: color-mix(in srgb, var(--gold) 24%, transparent);
-  stroke: var(--gold);
-  stroke-linejoin: round;
-  stroke-width: 1.3;
-}
-
-.radar-chart text {
-  fill: var(--ink);
+.algorithm-bar-meta {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 14px;
+  color: var(--ink);
   font-family: var(--font-mono);
-  font-size: 4px;
-  font-weight: 850;
-  text-anchor: middle;
+  font-size: 0.82rem;
+  font-weight: 900;
 }
 
-.radar-avatar {
-  top: 50%;
-  left: 50%;
-  width: 42px;
-  height: 42px;
-  transform: translate(-50%, -50%);
-  box-shadow: 2px 2px 0 var(--line-soft);
+.algorithm-bar-meta strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.algorithm-bar-meta span {
+  flex: 0 0 auto;
+  color: var(--muted);
+  font-size: 0.74rem;
+}
+
+.algorithm-bar-track {
+  height: 18px;
+  border: 3px solid var(--primary-line);
+  background: var(--surface-panel);
+}
+
+.algorithm-bar-track span {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--primary), var(--cyan));
 }
 
 .dashboard-columns {
@@ -713,12 +654,54 @@ onMounted(() => {
   font-weight: 950;
 }
 
-.dashboard-card ol {
+.dashboard-link-list {
   display: grid;
+  gap: 10px;
+  padding: 18px 20px 20px;
+  list-style: none;
+}
+
+.dashboard-link-list li {
+  min-width: 0;
+}
+
+.dashboard-link-list a {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
   gap: 12px;
-  padding: 20px 20px 20px 42px;
+  padding: 12px 14px;
+  border: 2px solid var(--line-soft);
+  background: var(--surface-panel);
+  color: var(--ink);
+  font-weight: 900;
+  text-decoration: none;
+}
+
+.dashboard-link-list a:hover {
+  border-color: var(--primary-line);
+  box-shadow: 3px 3px 0 var(--line-soft);
+  transform: translate(-1px, -1px);
+}
+
+.dashboard-link-list span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dashboard-link-list small {
   color: var(--muted);
-  font-weight: 760;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+.dashboard-list-state {
+  padding: 20px;
+  color: var(--muted);
+  font-weight: 800;
 }
 
 @media (max-width: 1120px) {
@@ -726,8 +709,7 @@ onMounted(() => {
     grid-template-columns: auto minmax(0, 1fr);
   }
 
-  .stats-content,
-  .algorithm-layout {
+  .stats-content {
     grid-template-columns: 1fr;
   }
 }
@@ -745,16 +727,26 @@ onMounted(() => {
     grid-template-columns: 1fr;
   }
 
-  .stats-header .btn {
-    justify-self: start;
-  }
-
   .stats-table-wrap {
     overflow-x: auto;
   }
 
   .stats-table {
     min-width: 520px;
+  }
+
+  .algorithm-bar-meta,
+  .dashboard-link-list a {
+    grid-template-columns: 1fr;
+  }
+
+  .algorithm-bar-meta {
+    display: grid;
+  }
+
+  .algorithm-bar-meta span,
+  .dashboard-link-list small {
+    justify-self: start;
   }
 }
 </style>
