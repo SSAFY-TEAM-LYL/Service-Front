@@ -365,7 +365,7 @@ watch(selectedLanguage, (language, oldLanguage) => {
 
       <div v-if="loading" class="page-state">불러오는 중...</div>
 
-      <div v-else-if="errorMessage" class="page-state">
+      <div v-else-if="errorMessage" class="page-state error-state">
         <p>{{ errorMessage }}</p>
         <button type="button" class="btn btn-outline" @click="loadInitial">다시 시도</button>
       </div>

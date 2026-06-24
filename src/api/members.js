@@ -8,12 +8,8 @@ export async function fetchMySolvedStats() {
   return unwrapApiResponse(await api.get('/members/me/solved-stats'))
 }
 
-export async function fetchMemberRankings({ page, size } = {}) {
-  return unwrapApiResponse(
-    await api.get('/members/rankings', {
-      params: { page, size },
-    }),
-  )
+export async function fetchMemberRankings() {
+  return unwrapApiResponse(await api.get('/members/rankings'))
 }
 
 export async function updateMyProfile(payload) {

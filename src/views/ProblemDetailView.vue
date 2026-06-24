@@ -287,7 +287,7 @@ watch(
         <p>불러오는 중...</p>
       </div>
 
-      <div v-else-if="errorMessage" class="detail-state">
+      <div v-else-if="errorMessage" class="detail-state error-state">
         <p>{{ errorMessage }}</p>
         <button type="button" class="btn btn-outline" @click="loadProblem">다시 시도</button>
       </div>

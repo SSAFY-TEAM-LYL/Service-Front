@@ -281,7 +281,7 @@ const removeComment = async (comment) => {
       <p>불러오는 중...</p>
     </div>
 
-    <div v-else-if="!post" class="detail-empty fade-in">
+    <div v-else-if="!post" class="detail-empty error-state fade-in">
       <h2>게시글을 찾을 수 없습니다</h2>
       <p>{{ errorMessage || '삭제되었거나 존재하지 않는 게시글입니다.' }}</p>
       <RouterLink to="/board" class="btn btn-outline detail-empty-action">목록으로</RouterLink>

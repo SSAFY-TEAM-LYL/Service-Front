@@ -193,6 +193,7 @@ onMounted(() => {
     <section
       v-if="isLoadingSolvedStats || solvedStatsError"
       class="dashboard-panel stats-state"
+      :class="{ 'error-state': solvedStatsError }"
       aria-live="polite"
     >
       <p v-if="isLoadingSolvedStats">푼 문제 통계를 불러오는 중입니다.</p>
@@ -263,7 +264,7 @@ onMounted(() => {
     <section class="dashboard-columns">
       <article class="dashboard-card">
         <header>▸ 최근 등록 문제 TOP 3</header>
-        <p v-if="dashboardListsError" class="dashboard-list-state">{{ dashboardListsError }}</p>
+        <p v-if="dashboardListsError" class="dashboard-list-state error-text">{{ dashboardListsError }}</p>
         <p v-else-if="isLoadingDashboardLists" class="dashboard-list-state">문제를 불러오는 중입니다.</p>
         <ol v-else-if="recentProblems.length > 0" class="dashboard-link-list">
           <li v-for="problem in recentProblems" :key="problem.id">
@@ -278,7 +279,7 @@ onMounted(() => {
 
       <article class="dashboard-card">
         <header>▸ 조회수 높은 게시글 TOP 3</header>
-        <p v-if="dashboardListsError" class="dashboard-list-state">{{ dashboardListsError }}</p>
+        <p v-if="dashboardListsError" class="dashboard-list-state error-text">{{ dashboardListsError }}</p>
         <p v-else-if="isLoadingDashboardLists" class="dashboard-list-state">게시글을 불러오는 중입니다.</p>
         <ol v-else-if="popularPosts.length > 0" class="dashboard-link-list">
           <li v-for="post in popularPosts" :key="post.id">

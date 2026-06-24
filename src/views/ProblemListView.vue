@@ -234,7 +234,7 @@ onMounted(async () => {
       <p>불러오는 중...</p>
     </div>
 
-    <div v-else-if="errorMessage" class="problem-state">
+    <div v-else-if="errorMessage" class="problem-state error-state">
       <p>{{ errorMessage }}</p>
       <button type="button" class="btn btn-outline" @click="loadProblems(currentPage)">다시 시도</button>
     </div>

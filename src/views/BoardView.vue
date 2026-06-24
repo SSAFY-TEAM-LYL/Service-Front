@@ -123,7 +123,7 @@ watch(
       <p>불러오는 중...</p>
     </div>
 
-    <div v-else-if="errorMessage" class="board-state">
+    <div v-else-if="errorMessage" class="board-state error-state">
       <p>{{ errorMessage }}</p>
     </div>
 
