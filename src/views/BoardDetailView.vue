@@ -11,6 +11,7 @@ import {
   updateBoardPost,
 } from '@/api/board'
 import { useAuthStore } from '@/stores/auth'
+import { renderMarkdown } from '@/utils/markdown'
 
 const route = useRoute()
 const router = useRouter()
@@ -43,6 +44,8 @@ const editingCommentContent = ref('')
 const commentActionId = ref(null)
 
 const postId = computed(() => route.params.id)
+const renderedPostContent = computed(() => renderMarkdown(post.value?.content || ''))
+const renderedEditContent = computed(() => renderMarkdown(editContent.value))
 const listTo = computed(() => ({
   name: 'board',
   query: post.value?.category ? { category: post.value.category } : {},
@@ -342,15 +345,16 @@ const removeComment = async (comment) => {
         <p v-if="actionError" class="error-text action-error">{{ actionError }}</p>
       </header>
 
-      <div v-if="!isEditingPost" class="detail-body">
-        <p v-for="(line, i) in post.content.split('\n')" :key="i">
-          <template v-if="line.trim()">{{ line }}</template>
-          <br v-else />
-        </p>
-      </div>
+      <div v-if="!isEditingPost" class="detail-body markdown-body" v-html="renderedPostContent"></div>
 
       <div v-else class="detail-edit-body">
-        <textarea v-model="editContent" rows="14" aria-label="게시글 내용"></textarea>
+        <div class="markdown-editor">
+          <textarea v-model="editContent" rows="14" aria-label="게시글 내용"></textarea>
+          <div class="markdown-preview" aria-label="Markdown 미리보기">
+            <div v-if="editContent.trim()" class="markdown-body" v-html="renderedEditContent"></div>
+            <p v-else class="preview-empty">미리보기</p>
+          </div>
+        </div>
       </div>
 
       <section class="comments-section">
@@ -624,9 +628,23 @@ const removeComment = async (comment) => {
   min-height: 200px;
 }
 
-.detail-body p {
-  margin-bottom: var(--space-1);
-  overflow-wrap: anywhere;
+.markdown-editor {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--space-4);
+}
+
+.markdown-preview {
+  min-height: 320px;
+  padding: var(--space-4);
+  border: 3px solid var(--color-border-light);
+  background: var(--color-surface);
+  overflow: auto;
+}
+
+.preview-empty {
+  color: var(--color-text-muted);
+  font-size: var(--font-sm);
 }
 
 .comments-section {
@@ -773,6 +791,12 @@ const removeComment = async (comment) => {
     width: 100%;
     justify-content: flex-end;
     flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 900px) {
+  .markdown-editor {
+    grid-template-columns: 1fr;
   }
 }
 </style>
