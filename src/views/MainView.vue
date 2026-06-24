@@ -1,69 +1,83 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
+import { fetchBoardPosts } from '@/api/board'
+import { fetchMySolvedStats } from '@/api/members'
+import { fetchProblems } from '@/api/problems'
 import { fetchMyStreak } from '@/api/streaks'
 import DailyStreakGrass from '@/components/DailyStreakGrass.vue'
 import { useAuthStore } from '@/stores/auth'
 
 const auth = useAuthStore()
+const XP_PER_LEVEL = 50
+const DIFFICULTY_COLORS = {
+  bronze: '#b45309',
+  silver: '#496982',
+  gold: '#f59e0b',
+  platinum: '#14b8a6',
+  diamond: '#0ea5e9',
+}
 
-const heroName = computed(() => auth.user?.nickname || 'Alt Learner')
-const isAdmin = computed(() => auth.user?.role === 'ADMIN')
+const heroName = computed(() => auth.user?.nickname || '사용자')
 const streak = ref(null)
 const isLoadingStreak = ref(false)
 const streakError = ref('')
+const solvedStats = ref(null)
+const isLoadingSolvedStats = ref(false)
+const solvedStatsError = ref('')
+const recentProblems = ref([])
+const popularPosts = ref([])
+const isLoadingDashboardLists = ref(false)
+const dashboardListsError = ref('')
 
-const overviewCards = computed(() => {
-  const cards = [
-    {
-      label: 'PROBLEMS',
-      value: '문제풀기',
-      note: '공개 문제 목록',
-      tone: 'green',
-      to: '/problems',
-      icon: '◎',
-    },
-    {
-      label: 'CODE RUN',
-      value: '제출/채점',
-      note: '문제 상세에서 실행',
-      tone: 'blue',
-      to: '/problems',
-      icon: '</>',
-    },
-    {
-      label: 'BOARD',
-      value: '게시판',
-      note: '공지·질문·자유글',
-      tone: 'purple',
-      to: '/board',
-      icon: '□',
-    },
-    {
-      label: 'PROFILE',
-      value: auth.isLoggedIn ? '내 정보' : '로그인',
-      note: auth.isLoggedIn ? '회원정보 관리' : '제출 기능 활성화',
-      tone: 'gold',
-      to: auth.isLoggedIn ? '/mypage' : '/login',
-      icon: '◆',
-    },
-  ]
+const currentXp = computed(() => Number(auth.user?.xp) || 0)
+const currentLevel = computed(() => Number(auth.user?.level) || Math.floor(currentXp.value / XP_PER_LEVEL) + 1)
+const currentLevelXp = computed(() => currentXp.value % XP_PER_LEVEL)
+const nextLevelXp = computed(() => XP_PER_LEVEL - currentLevelXp.value)
+const xpProgressPercent = computed(() => Math.min(100, Math.max(0, (currentLevelXp.value / XP_PER_LEVEL) * 100)))
+const xpProgressText = computed(() => `${currentLevelXp.value} / ${XP_PER_LEVEL} XP`)
+const xpStatusMessage = computed(() => {
+  return `현재 경험치 : ${currentXp.value} XP, Lv. ${currentLevel.value + 1}까지 ${nextLevelXp.value} XP 남았습니다! 화이팅!`
+})
 
-  if (isAdmin.value) {
-    return [
-      ...cards,
-      {
-        label: 'ADMIN',
-        value: '문제 공개',
-        note: '관리자 도구',
-        tone: 'red',
-        to: '/admin/problem-publications',
-        icon: '▣',
-      },
-    ]
+const solvedProblemCount = computed(() => Number(solvedStats.value?.totalSolvedCount) || 0)
+const difficultyStats = computed(() => {
+  return (solvedStats.value?.difficulties || []).map((item) => ({
+    key: item.tier,
+    label: item.label,
+    solved: Number(item.solvedCount) || 0,
+    percent: Number(item.percent) || 0,
+    color: DIFFICULTY_COLORS[item.tier] || 'var(--primary)',
+    levels: item.levels || [],
+  }))
+})
+const algorithmStats = computed(() => {
+  return (solvedStats.value?.algorithms || []).map((item) => ({
+    code: item.code,
+    label: item.label,
+    solved: Number(item.solvedCount) || 0,
+    percent: Number(item.percent) || 0,
+    barPercent: Math.min(100, Math.max(0, Number(item.percent) || 0)),
+  }))
+})
+const donutGradient = computed(() => {
+  if (solvedProblemCount.value <= 0) {
+    return 'conic-gradient(var(--line-soft) 0% 100%)'
   }
+  let cursor = 0
+  const segments = difficultyStats.value
+    .filter((item) => item.percent > 0)
+    .map((item) => {
+      const start = cursor
+      cursor += item.percent
+      return `${item.color} ${start}% ${cursor}%`
+    })
 
-  return cards
+  return `conic-gradient(${segments.join(', ')})`
+})
+
+const visibleAlgorithmStats = computed(() => {
+  return [...algorithmStats.value].sort((a, b) => b.solved - a.solved || a.label.localeCompare(b.label))
 })
 
 const loadStreak = async () => {
@@ -83,14 +97,55 @@ const loadStreak = async () => {
   }
 }
 
+const loadSolvedStats = async () => {
+  if (!auth.isLoggedIn) {
+    solvedStats.value = null
+    return
+  }
+
+  isLoadingSolvedStats.value = true
+  solvedStatsError.value = ''
+  try {
+    solvedStats.value = await fetchMySolvedStats()
+  } catch (error) {
+    solvedStatsError.value = error.response?.data?.message || '푼 문제 통계를 불러오지 못했습니다.'
+  } finally {
+    isLoadingSolvedStats.value = false
+  }
+}
+
+const loadDashboardLists = async () => {
+  isLoadingDashboardLists.value = true
+  dashboardListsError.value = ''
+  try {
+    const [problemData, boardData] = await Promise.all([
+      fetchProblems({ size: 3 }),
+      fetchBoardPosts({ size: 20 }),
+    ])
+    recentProblems.value = problemData.items || []
+    popularPosts.value = [...(boardData.items || [])]
+      .sort((a, b) => Number(b.views) - Number(a.views) || b.id - a.id)
+      .slice(0, 3)
+  } catch (error) {
+    dashboardListsError.value = error.response?.data?.message || '대시보드 목록을 불러오지 못했습니다.'
+  } finally {
+    isLoadingDashboardLists.value = false
+  }
+}
+
 watch(
   () => auth.isLoggedIn,
   () => {
     loadStreak()
+    loadSolvedStats()
   },
 )
 
-onMounted(loadStreak)
+onMounted(() => {
+  loadStreak()
+  loadSolvedStats()
+  loadDashboardLists()
+})
 </script>
 
 <template>
@@ -104,24 +159,25 @@ onMounted(loadStreak)
       <div class="player-summary">
         <div class="level-box">
           <span>LV</span>
-          <strong>{{ auth.isLoggedIn ? '12' : '?' }}</strong>
+          <strong>{{ currentLevel }}</strong>
         </div>
 
         <div class="player-copy">
           <p class="eyebrow">WELCOME BACK</p>
           <h1>{{ heroName }}</h1>
-          <p>
-            문제 풀이, 코드 제출, 게시판 기능이 준비되어 있습니다.
-            학습 흐름은 문제 풀이와 제출 화면에서 이어집니다.
-          </p>
-          <div class="xp-bar" aria-label="서비스 진행도">
-            <span />
+          <p>{{ xpStatusMessage }}</p>
+          <div class="xp-meta" aria-hidden="true">
+            <span>Lv. {{ currentLevel }}</span>
+            <strong>{{ xpProgressText }}</strong>
+            <span>Lv. {{ currentLevel + 1 }}</span>
+          </div>
+          <div
+            class="xp-bar"
+            :aria-label="`레벨 ${currentLevel} 경험치 진행도 ${xpProgressText}`"
+          >
+            <span :style="{ width: `${xpProgressPercent}%` }" />
           </div>
         </div>
-
-        <RouterLink :to="auth.isLoggedIn ? '/problems' : '/login'" class="btn btn-primary">
-          {{ auth.isLoggedIn ? '문제 풀러가기' : '로그인하기' }}
-        </RouterLink>
       </div>
 
       <div v-if="auth.isLoggedIn" class="dashboard-streak">
@@ -130,42 +186,110 @@ onMounted(loadStreak)
     </section>
 
     <section class="section-heading">
-      <strong>OVERVIEW</strong>
+      <strong>SOLVED STATS</strong>
       <span />
     </section>
 
-    <section class="overview-grid" aria-label="서비스 기능">
-      <RouterLink
-        v-for="card in overviewCards"
-        :key="card.label"
-        :to="card.to"
-        class="overview-card"
-        :class="`tone-${card.tone}`"
-      >
-        <span>{{ card.label }}</span>
-        <i>{{ card.icon }}</i>
-        <strong>{{ card.value }}</strong>
-        <small>{{ card.note }}</small>
-      </RouterLink>
+    <section
+      v-if="isLoadingSolvedStats || solvedStatsError"
+      class="dashboard-panel stats-state"
+      :class="{ 'error-state': solvedStatsError }"
+      aria-live="polite"
+    >
+      <p v-if="isLoadingSolvedStats">푼 문제 통계를 불러오는 중입니다.</p>
+      <p v-else>{{ solvedStatsError }}</p>
+    </section>
+
+    <section v-else class="solved-stats-grid" aria-label="푼 문제 통계">
+      <article class="dashboard-panel stats-panel">
+        <header class="stats-header">
+          <span>◎ 난이도 분포</span>
+          <strong>{{ solvedProblemCount }}문제 해결</strong>
+        </header>
+
+        <div class="stats-content difficulty-layout">
+          <div class="donut-chart" :style="{ background: donutGradient }" aria-hidden="true">
+            <div class="donut-hole">
+              <strong>{{ solvedProblemCount }}</strong>
+              <span>solved</span>
+            </div>
+          </div>
+
+          <div class="stats-table-wrap">
+            <table class="stats-table">
+              <thead>
+                <tr>
+                  <th>레벨</th>
+                  <th>문제</th>
+                  <th>비율</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="item in difficultyStats" :key="item.key">
+                  <td :style="{ color: item.color }">
+                    {{ item.label }}
+                    <small class="difficulty-levels">
+                      {{ item.levels.map((level) => `${level.level} ${level.solvedCount}`).join(' · ') }}
+                    </small>
+                  </td>
+                  <td>{{ item.solved }}</td>
+                  <td>{{ item.percent.toFixed(1) }}%</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </article>
+
+      <article class="dashboard-panel stats-panel">
+        <header class="stats-header">
+          <span>◇ 알고리즘 유형</span>
+          <strong>자주 푼 태그</strong>
+        </header>
+
+        <div class="algorithm-bars" aria-label="알고리즘별 풀이 비율">
+          <div v-for="item in visibleAlgorithmStats" :key="item.code" class="algorithm-bar-row">
+            <div class="algorithm-bar-meta">
+              <strong>#{{ item.label }}</strong>
+              <span>{{ item.solved }}문제 · {{ item.percent.toFixed(1) }}%</span>
+            </div>
+            <div class="algorithm-bar-track" aria-hidden="true">
+              <span :style="{ width: `${item.barPercent}%` }" />
+            </div>
+          </div>
+        </div>
+      </article>
     </section>
 
     <section class="dashboard-columns">
       <article class="dashboard-card">
-        <header>▸ 문제 풀이 플로우</header>
-        <ol>
-          <li>문제 목록에서 공개 문제를 선택합니다.</li>
-          <li>문제 상세에서 언어와 템플릿 코드를 선택합니다.</li>
-          <li>제출 후 채점 결과와 최근 제출을 확인합니다.</li>
+        <header>▸ 최근 등록 문제 TOP 3</header>
+        <p v-if="dashboardListsError" class="dashboard-list-state error-text">{{ dashboardListsError }}</p>
+        <p v-else-if="isLoadingDashboardLists" class="dashboard-list-state">문제를 불러오는 중입니다.</p>
+        <ol v-else-if="recentProblems.length > 0" class="dashboard-link-list">
+          <li v-for="problem in recentProblems" :key="problem.id">
+            <RouterLink :to="{ name: 'problem-detail', params: { problemId: problem.id } }">
+              <span>{{ problem.problemNumber ? `${problem.problemNumber}. ` : '' }}{{ problem.title }}</span>
+              <small>{{ problem.difficulty }}</small>
+            </RouterLink>
+          </li>
         </ol>
+        <p v-else class="dashboard-list-state">아직 공개된 문제가 없습니다.</p>
       </article>
 
       <article class="dashboard-card">
-        <header>▸ 커뮤니티 플로우</header>
-        <ol>
-          <li>공지, 자유, 질문 카테고리를 탐색합니다.</li>
-          <li>로그인 후 게시글을 작성하고 수정할 수 있습니다.</li>
-          <li>게시글 상세에서 내용을 확인합니다.</li>
+        <header>▸ 조회수 높은 게시글 TOP 3</header>
+        <p v-if="dashboardListsError" class="dashboard-list-state error-text">{{ dashboardListsError }}</p>
+        <p v-else-if="isLoadingDashboardLists" class="dashboard-list-state">게시글을 불러오는 중입니다.</p>
+        <ol v-else-if="popularPosts.length > 0" class="dashboard-link-list">
+          <li v-for="post in popularPosts" :key="post.id">
+            <RouterLink :to="{ name: 'board-detail', params: { id: post.id } }">
+              <span>{{ post.title }}</span>
+              <small>조회 {{ post.views }}</small>
+            </RouterLink>
+          </li>
         </ol>
+        <p v-else class="dashboard-list-state">아직 게시글이 없습니다.</p>
       </article>
     </section>
   </div>
@@ -178,8 +302,7 @@ onMounted(loadStreak)
 }
 
 .dashboard-panel,
-.dashboard-card,
-.overview-card {
+.dashboard-card {
   border: 3px solid var(--primary-line);
   background: var(--surface-plain);
   box-shadow: var(--pixel-shadow-muted);
@@ -210,7 +333,7 @@ onMounted(loadStreak)
 
 .player-summary {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
   gap: 24px;
   padding: clamp(22px, 3vw, 38px);
@@ -266,9 +389,26 @@ onMounted(loadStreak)
   font-weight: 750;
 }
 
+.xp-meta {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  margin-top: 16px;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 900;
+}
+
+.xp-meta strong {
+  justify-self: center;
+  color: var(--ink);
+}
+
 .xp-bar {
   height: 18px;
-  margin-top: 16px;
+  margin-top: 8px;
   border: 4px solid var(--dashboard-xp-border, var(--primary-dark));
   background: var(--dashboard-xp-track, var(--primary-soft));
 }
@@ -282,13 +422,6 @@ onMounted(loadStreak)
     var(--dashboard-xp-fill, var(--primary)),
     var(--dashboard-xp-fill-end, var(--cyan))
   );
-}
-
-.player-summary .btn-primary {
-  border-color: var(--dashboard-action-bg, var(--primary));
-  background: var(--dashboard-action-bg, var(--primary));
-  box-shadow: 5px 5px 0 var(--dashboard-action-shadow, var(--primary-shadow));
-  color: var(--dashboard-action-text, #fff);
 }
 
 .dashboard-streak {
@@ -320,81 +453,192 @@ onMounted(loadStreak)
   background: var(--line-soft);
 }
 
-.overview-grid {
+.solved-stats-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 16px;
+  gap: 22px;
 }
 
-.overview-card {
-  display: grid;
-  min-height: 150px;
-  padding: 18px;
-  transition:
-    transform var(--transition-fast),
-    box-shadow var(--transition-fast);
+.stats-panel {
+  overflow: hidden;
 }
 
-.overview-card:hover {
-  transform: translate(-2px, -2px);
-}
-
-.overview-card span,
-.overview-card small {
+.stats-state {
+  padding: 22px;
   color: var(--muted);
   font-family: var(--font-mono);
+  font-weight: 900;
+}
+
+.stats-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px 14px;
+  align-items: center;
+  padding: 18px 20px;
+  border-bottom: 3px solid var(--line-soft);
+  background: var(--surface-panel);
+}
+
+.stats-header span {
+  grid-column: 1 / -1;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+.stats-header strong {
+  color: var(--ink);
+  font-size: clamp(1.25rem, 2vw, 1.8rem);
+  font-weight: 950;
+}
+
+.stats-content {
+  display: grid;
+  grid-template-columns: minmax(230px, 0.65fr) minmax(0, 1.35fr);
+  gap: clamp(20px, 4vw, 52px);
+  align-items: center;
+  padding: clamp(22px, 3vw, 34px);
+}
+
+.donut-chart {
+  position: relative;
+  justify-self: center;
+  width: min(100%, 280px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ink) 8%, transparent);
+}
+
+.donut-chart::before {
+  position: absolute;
+  inset: 26%;
+  border-radius: 50%;
+  background: var(--surface-plain);
+  content: "";
+}
+
+.donut-hole {
+  position: absolute;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border: 3px solid var(--primary-line);
+  border-radius: 50%;
+  background: var(--primary);
+  color: #fff;
+  font-family: var(--font-mono);
+  font-weight: 950;
+}
+
+.donut-hole {
+  inset: 38%;
+  box-shadow: 3px 3px 0 var(--line-soft);
+  line-height: 1;
+}
+
+.donut-hole strong {
+  align-self: end;
+  font-size: 1.35rem;
+}
+
+.donut-hole span {
+  align-self: start;
+  color: color-mix(in srgb, #fff 82%, var(--primary-line));
+  font-size: 0.56rem;
+  text-transform: uppercase;
+}
+
+.stats-table {
+  width: 100%;
+  border-collapse: collapse;
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: 0.84rem;
+}
+
+.stats-table th,
+.stats-table td {
+  padding: 10px 12px;
+  border-bottom: 2px solid var(--line-soft);
+  text-align: right;
+  vertical-align: middle;
+}
+
+.stats-table th:first-child,
+.stats-table td:first-child {
+  text-align: left;
+}
+
+.stats-table th {
+  color: var(--ink);
+  font-size: 0.74rem;
+  font-weight: 950;
+}
+
+.stats-table td {
+  color: var(--muted);
   font-weight: 850;
 }
 
-.overview-card span {
-  font-size: 0.72rem;
-  letter-spacing: 0.14em;
-}
-
-.overview-card i {
-  justify-self: end;
-  color: currentColor;
-  font-family: var(--font-mono);
-  font-style: normal;
+.stats-table td:first-child,
+.stats-table td:nth-child(2) {
+  color: var(--ink);
   font-weight: 950;
 }
 
-.overview-card strong {
-  align-self: end;
-  color: currentColor;
+.difficulty-levels {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
+.algorithm-bars {
+  display: grid;
+  gap: 14px;
+  padding: clamp(22px, 3vw, 34px);
+}
+
+.algorithm-bar-row {
+  display: grid;
+  gap: 8px;
+}
+
+.algorithm-bar-meta {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 14px;
+  color: var(--ink);
   font-family: var(--font-mono);
-  font-size: clamp(1.3rem, 2vw, 1.8rem);
-  font-weight: 950;
+  font-size: 0.82rem;
+  font-weight: 900;
 }
 
-.overview-card.tone-green {
-  border-color: var(--overview-green-border, color-mix(in srgb, var(--green) 45%, var(--primary-line)));
-  color: var(--overview-green, var(--green));
-  box-shadow: 5px 5px 0 var(--overview-green-shadow, var(--green-dark));
+.algorithm-bar-meta strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
-.overview-card.tone-blue {
-  border-color: var(--overview-blue-border, color-mix(in srgb, var(--blue) 45%, var(--primary-line)));
-  color: var(--overview-blue, var(--blue));
-  box-shadow: 5px 5px 0 var(--overview-blue-shadow, #1d4ed8);
+.algorithm-bar-meta span {
+  flex: 0 0 auto;
+  color: var(--muted);
+  font-size: 0.74rem;
 }
 
-.overview-card.tone-purple {
-  border-color: var(--overview-purple-border, color-mix(in srgb, var(--primary) 45%, var(--primary-line)));
-  color: var(--overview-purple, var(--primary));
-  box-shadow: 5px 5px 0 var(--overview-purple-shadow, var(--primary-shadow));
+.algorithm-bar-track {
+  height: 18px;
+  border: 3px solid var(--primary-line);
+  background: var(--surface-panel);
 }
 
-.overview-card.tone-gold {
-  border-color: var(--overview-gold-border, color-mix(in srgb, var(--gold) 45%, var(--primary-line)));
-  color: var(--overview-gold, var(--gold));
-  box-shadow: 5px 5px 0 var(--overview-gold-shadow, var(--gold-dark));
-}
-
-.overview-card.tone-red {
-  border-color: var(--overview-red-border, color-mix(in srgb, var(--red) 45%, var(--primary-line)));
-  color: var(--overview-red, var(--red));
-  box-shadow: 5px 5px 0 var(--overview-red-shadow, var(--red-dark));
+.algorithm-bar-track span {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--primary), var(--cyan));
 }
 
 .dashboard-columns {
@@ -411,37 +655,99 @@ onMounted(loadStreak)
   font-weight: 950;
 }
 
-.dashboard-card ol {
+.dashboard-link-list {
   display: grid;
+  gap: 10px;
+  padding: 18px 20px 20px;
+  list-style: none;
+}
+
+.dashboard-link-list li {
+  min-width: 0;
+}
+
+.dashboard-link-list a {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
   gap: 12px;
-  padding: 20px 20px 20px 42px;
+  padding: 12px 14px;
+  border: 2px solid var(--line-soft);
+  background: var(--surface-panel);
+  color: var(--ink);
+  font-weight: 900;
+  text-decoration: none;
+}
+
+.dashboard-link-list a:hover {
+  border-color: var(--primary-line);
+  box-shadow: 3px 3px 0 var(--line-soft);
+  transform: translate(-1px, -1px);
+}
+
+.dashboard-link-list span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dashboard-link-list small {
   color: var(--muted);
-  font-weight: 760;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+.dashboard-list-state {
+  padding: 20px;
+  color: var(--muted);
+  font-weight: 800;
 }
 
 @media (max-width: 1120px) {
-  .overview-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
   .player-summary {
     grid-template-columns: auto minmax(0, 1fr);
   }
 
-  .player-summary .btn {
-    grid-column: 1 / -1;
-    justify-self: start;
+  .stats-content {
+    grid-template-columns: 1fr;
   }
 }
 
 @media (max-width: 720px) {
-  .overview-grid,
   .dashboard-columns {
     grid-template-columns: 1fr;
   }
 
   .player-summary {
     grid-template-columns: 1fr;
+  }
+
+  .stats-header {
+    grid-template-columns: 1fr;
+  }
+
+  .stats-table-wrap {
+    overflow-x: auto;
+  }
+
+  .stats-table {
+    min-width: 520px;
+  }
+
+  .algorithm-bar-meta,
+  .dashboard-link-list a {
+    grid-template-columns: 1fr;
+  }
+
+  .algorithm-bar-meta {
+    display: grid;
+  }
+
+  .algorithm-bar-meta span,
+  .dashboard-link-list small {
+    justify-self: start;
   }
 }
 </style>

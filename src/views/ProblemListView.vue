@@ -16,6 +16,8 @@ const pageCursors = ref([null])
 const selectedMode = ref('all')
 const selectedDifficulty = ref('bronze')
 const selectedAlgorithm = ref('')
+const searchKeyword = ref('')
+const appliedSearchKeyword = ref('')
 
 const difficultyOptions = [
   { value: 'bronze', label: 'Bronze' },
@@ -72,6 +74,7 @@ const loadProblems = async (page = 1) => {
       cursor,
       size: PAGE_SIZE,
       ...activeFilter.value,
+      query: appliedSearchKeyword.value,
     })
     problems.value = response.items || []
     currentPage.value = page
@@ -121,6 +124,19 @@ const changeDifficulty = async (event) => {
 
 const changeAlgorithm = async (event) => {
   selectedAlgorithm.value = event.target.value
+  resetPagination()
+  await loadProblems(1)
+}
+
+const submitSearch = async () => {
+  appliedSearchKeyword.value = searchKeyword.value.trim()
+  resetPagination()
+  await loadProblems(1)
+}
+
+const clearSearch = async () => {
+  searchKeyword.value = ''
+  appliedSearchKeyword.value = ''
   resetPagination()
   await loadProblems(1)
 }
@@ -190,13 +206,35 @@ onMounted(async () => {
           </option>
         </select>
       </div>
+
+      <form class="search-control" role="search" @submit.prevent="submitSearch">
+        <label for="problem-search">문제 검색</label>
+        <div class="search-input-row">
+          <input
+            id="problem-search"
+            v-model="searchKeyword"
+            type="search"
+            placeholder="번호 또는 제목"
+            autocomplete="off"
+          />
+          <button type="submit" class="btn btn-primary">검색</button>
+          <button
+            v-if="appliedSearchKeyword"
+            type="button"
+            class="btn btn-outline"
+            @click="clearSearch"
+          >
+            초기화
+          </button>
+        </div>
+      </form>
     </div>
 
     <div v-if="loading" class="problem-state">
       <p>불러오는 중...</p>
     </div>
 
-    <div v-else-if="errorMessage" class="problem-state">
+    <div v-else-if="errorMessage" class="problem-state error-state">
       <p>{{ errorMessage }}</p>
       <button type="button" class="btn btn-outline" @click="loadProblems(currentPage)">다시 시도</button>
     </div>
@@ -226,7 +264,7 @@ onMounted(async () => {
       </div>
 
       <div v-else class="problem-empty">
-        <p>공개된 문제가 없습니다.</p>
+        <p>{{ appliedSearchKeyword ? '검색 결과가 없습니다.' : '공개된 문제가 없습니다.' }}</p>
       </div>
 
       <div v-if="problems.length > 0" class="pagination">
@@ -264,7 +302,7 @@ onMounted(async () => {
 <style scoped>
 .problem-page {
   padding: 0;
-  max-width: 1180px;
+  max-width: none;
 }
 
 .problem-top {
@@ -293,6 +331,7 @@ onMounted(async () => {
   justify-content: space-between;
   gap: var(--space-4);
   margin-bottom: var(--space-5);
+  flex-wrap: wrap;
 }
 
 .filter-tabs {
@@ -337,6 +376,32 @@ onMounted(async () => {
   border: 3px solid var(--color-border);
   background: var(--color-bg);
   color: var(--color-text);
+  font-weight: 800;
+}
+
+.search-control {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-left: auto;
+  color: var(--color-text-secondary);
+  font-size: var(--font-sm);
+  font-weight: 800;
+}
+
+.search-input-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.search-input-row input {
+  width: min(280px, 38vw);
+  height: 40px;
+  border: 3px solid var(--color-border);
+  background: var(--color-bg);
+  color: var(--color-text);
+  padding: 0 var(--space-3);
   font-weight: 800;
 }
 
@@ -467,6 +532,21 @@ onMounted(async () => {
   }
 
   .filter-control select {
+    width: 100%;
+  }
+
+  .search-control {
+    align-items: stretch;
+    flex-direction: column;
+    margin-left: 0;
+  }
+
+  .search-input-row {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .search-input-row input {
     width: 100%;
   }
 

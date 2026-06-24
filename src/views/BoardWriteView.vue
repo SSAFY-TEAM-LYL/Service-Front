@@ -3,6 +3,7 @@ import { computed, ref, watchEffect } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { createBoardPost } from '@/api/board'
 import { useAuthStore } from '@/stores/auth'
+import { renderMarkdown } from '@/utils/markdown'
 
 const router = useRouter()
 const route = useRoute()
@@ -28,6 +29,7 @@ const title = ref('')
 const content = ref('')
 const errors = ref({})
 const loading = ref(false)
+const renderedContent = computed(() => renderMarkdown(content.value))
 
 watchEffect(() => {
   if (!selectableCategories.value.some((item) => item.value === category.value)) {
@@ -109,13 +111,19 @@ const handleCancel = () => {
 
       <div class="input-group">
         <label for="post-content">내용</label>
-        <textarea
-          id="post-content"
-          v-model="content"
-          placeholder="내용을 입력하세요"
-          rows="14"
-          :class="{ 'input-error': errors.content }"
-        ></textarea>
+        <div class="markdown-editor">
+          <textarea
+            id="post-content"
+            v-model="content"
+            placeholder="Markdown 문법을 사용할 수 있습니다!"
+            rows="14"
+            :class="{ 'input-error': errors.content }"
+          ></textarea>
+          <div class="markdown-preview" aria-label="Markdown 미리보기">
+            <div v-if="content.trim()" class="markdown-body" v-html="renderedContent"></div>
+            <p v-else class="preview-empty">미리보기</p>
+          </div>
+        </div>
         <p v-if="errors.content" class="error-text">{{ errors.content }}</p>
       </div>
 
@@ -133,7 +141,7 @@ const handleCancel = () => {
 
 <style scoped>
 .write-page {
-  max-width: 720px;
+  max-width: none;
   padding: 0;
 }
 
@@ -157,6 +165,25 @@ const handleCancel = () => {
 .write-form textarea {
   min-height: 320px;
   line-height: 1.8;
+}
+
+.markdown-editor {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--space-4);
+}
+
+.markdown-preview {
+  min-height: 320px;
+  padding: var(--space-4);
+  border: 3px solid var(--color-border-light);
+  background: var(--color-surface);
+  overflow: auto;
+}
+
+.preview-empty {
+  color: var(--color-text-muted);
+  font-size: var(--font-sm);
 }
 
 .category-options {
@@ -196,5 +223,11 @@ const handleCancel = () => {
   justify-content: flex-end;
   gap: var(--space-3);
   margin-top: var(--space-6);
+}
+
+@media (max-width: 900px) {
+  .markdown-editor {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

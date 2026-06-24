@@ -1,6 +1,7 @@
 <script setup>
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
+import { fetchProblemSummary } from '@/api/problems'
 import AqLogo from '@/components/AqLogo.vue'
 import { useAuthStore } from '@/stores/auth'
 import { getApiErrorMessage, getOAuthErrorMessage } from '@/utils/authErrors'
@@ -19,12 +20,11 @@ const showPassword = ref(false)
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api'
 
-const leftStats = [
-  { label: 'AI PROBLEMS READY', value: 12, tone: 'green' },
-  { label: 'CODE RUNS TODAY', value: 3, tone: 'purple' },
-  { label: 'BOARD THREADS', value: 28, tone: 'gold' },
-]
-const displayedStats = ref(leftStats.map(() => 0))
+const leftStats = ref([
+  { label: 'PUBLIC PROBLEMS', value: 0, tone: 'green' },
+  { label: 'SUBMISSIONS TODAY', value: 0, tone: 'purple' },
+])
+const displayedStats = ref(leftStats.value.map(() => 0))
 
 let statDelayTimer = 0
 const statTimers = []
@@ -41,18 +41,22 @@ const clearStatTimers = () => {
 
 const startStatCounter = () => {
   clearStatTimers()
-  displayedStats.value = leftStats.map(() => 0)
+  displayedStats.value = leftStats.value.map(() => 0)
 
-  leftStats.forEach((stat, index) => {
-    const stepMs = Math.max(48, Math.round(1500 / stat.value))
+  leftStats.value.forEach((stat, index) => {
+    const targetValue = Number(stat.value) || 0
+    if (targetValue <= 0) {
+      return
+    }
+    const stepMs = Math.max(48, Math.round(1500 / targetValue))
     const timer = window.setTimeout(() => {
       let nextValue = 0
       const interval = window.setInterval(() => {
         nextValue += 1
         displayedStats.value = displayedStats.value.map((value, valueIndex) =>
-          valueIndex === index ? Math.min(nextValue, stat.value) : value,
+          valueIndex === index ? Math.min(nextValue, targetValue) : value,
         )
-        if (nextValue >= stat.value) {
+        if (nextValue >= targetValue) {
           window.clearInterval(interval)
         }
       }, stepMs)
@@ -60,6 +64,23 @@ const startStatCounter = () => {
     }, 180 * index)
     statTimers.push(timer)
   })
+}
+
+const loadServiceSummary = async () => {
+  try {
+    const summary = await fetchProblemSummary()
+    leftStats.value = [
+      { label: 'PUBLIC PROBLEMS', value: summary?.publishedProblemCount || 0, tone: 'green' },
+      { label: 'SUBMISSIONS TODAY', value: summary?.todaySubmissionCount || 0, tone: 'purple' },
+    ]
+    displayedStats.value = leftStats.value.map(() => 0)
+  } catch {
+    leftStats.value = [
+      { label: 'PUBLIC PROBLEMS', value: 0, tone: 'green' },
+      { label: 'SUBMISSIONS TODAY', value: 0, tone: 'purple' },
+    ]
+    displayedStats.value = leftStats.value.map(() => 0)
+  }
 }
 
 watch(
@@ -103,7 +124,8 @@ const restoreRoute = () => ({
   query: email.value.trim() ? { email: email.value.trim() } : {},
 })
 
-onMounted(() => {
+onMounted(async () => {
+  await loadServiceSummary()
   statDelayTimer = window.setTimeout(startStatCounter, 280)
 })
 
@@ -125,18 +147,9 @@ onBeforeUnmount(() => {
         </span>
       </RouterLink>
 
-      <div class="login-status">
-        <span class="status-dot" aria-hidden="true" />
-        <strong>AI ENGINE ONLINE</strong>
-      </div>
-
       <div class="login-copy">
         <p><span class="acronym-key">A</span>lternative <span class="acronym-key">L</span>earning <span class="acronym-key">T</span>rack</p>
         <h1><span class="acronym-key acronym-key-wide">Al</span>gorithm <span class="acronym-key">T</span>raining</h1>
-        <span>
-          AI 생성 문제로 알고리즘 공부를 더 알차게,<br />
-          풀이, 코드 제출, 게시판까지 한 흐름으로 이어가세요.
-        </span>
       </div>
 
       <dl class="login-stats" aria-label="서비스 요약">
@@ -149,14 +162,14 @@ onBeforeUnmount(() => {
       </dl>
 
       <blockquote class="login-quote">
-        <p>"오늘의 AI 문제가 내일의 풀이 감각을 더 선명하게 만듭니다."</p>
+        <p>"매일 조금씩, 꾸준히 성장할 수 있는 환경을 제공합니다."</p>
         <footer>- Alt Algorithm Training</footer>
       </blockquote>
     </section>
 
     <section class="login-stage" aria-label="로그인">
       <div class="login-window">
-        <div class="login-window-title">■ PLAYER LOGIN</div>
+        <div class="login-window-title">■ LOGIN</div>
 
         <div class="login-window-body">
           <div class="login-socials">

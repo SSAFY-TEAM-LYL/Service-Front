@@ -26,10 +26,11 @@ export const deleteSubmission = async (submissionId) => {
   return unwrapApiResponse(response)
 }
 
-export const fetchProblemSubmissions = async (problemId, { cursor, size } = {}) => {
+export const fetchProblemSubmissions = async (problemId, { cursor, size, mine } = {}) => {
   const params = {}
   if (cursor) params.cursor = cursor
   if (size) params.size = size
+  if (mine !== undefined) params.mine = mine
 
   const response = await api.get(`/problems/${problemId}/submissions`, { params })
   return unwrapApiResponse(response)

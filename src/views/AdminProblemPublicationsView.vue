@@ -115,7 +115,7 @@ onMounted(loadProblems)
       <p>불러오는 중...</p>
     </div>
 
-    <div v-else-if="errorMessage && problems.length === 0" class="admin-state">
+    <div v-else-if="errorMessage && problems.length === 0" class="admin-state error-state">
       <p>{{ errorMessage }}</p>
       <button type="button" class="btn btn-outline" @click="loadProblems(currentPage)">다시 시도</button>
     </div>
@@ -205,7 +205,7 @@ onMounted(loadProblems)
 <style scoped>
 .admin-page {
   padding: 0;
-  max-width: 1180px;
+  max-width: none;
 }
 
 .admin-top {

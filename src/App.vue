@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
 import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
+import { fetchMyStreak } from '@/api/streaks'
 import AqLogo from '@/components/AqLogo.vue'
 import { useAuthStore } from '@/stores/auth'
 import { applyUiSettings, readStoredUiSettings } from '@/utils/uiSettings'
@@ -8,9 +9,12 @@ import { applyUiSettings, readStoredUiSettings } from '@/utils/uiSettings'
 const auth = useAuthStore()
 const route = useRoute()
 const router = useRouter()
+const XP_PER_LEVEL = 50
 
 const navImageFailed = ref(false)
 const isProfileOpen = ref(false)
+const sidebarStreak = ref(null)
+const isLoadingSidebarStreak = ref(false)
 
 const authRouteNames = ['login', 'signup', 'account-restore', 'oauth-callback']
 
@@ -19,10 +23,16 @@ const isAdmin = computed(() => auth.user?.role === 'ADMIN')
 const showNavProfileImage = computed(() => auth.user?.profileImageUrl && !navImageFailed.value)
 const avatarInitial = computed(() => (auth.user?.nickname || 'U').slice(0, 1).toUpperCase())
 const pageTitle = computed(() => route.meta?.title || routeTitleMap[route.name] || '대시보드')
+const currentXp = computed(() => Number(auth.user?.xp) || 0)
+const currentLevel = computed(() => Number(auth.user?.level) || Math.floor(currentXp.value / XP_PER_LEVEL) + 1)
+const currentLevelXp = computed(() => currentXp.value % XP_PER_LEVEL)
+const xpProgressPercent = computed(() => Math.min(100, Math.max(0, (currentLevelXp.value / XP_PER_LEVEL) * 100)))
+const currentStreak = computed(() => sidebarStreak.value?.currentStreak ?? 0)
 
 const mainNavItems = [
   { to: '/', label: '대시보드', icon: '▦' },
   { to: '/problems', label: '문제풀기', icon: '</>' },
+  { to: '/ranking', label: '랭킹', icon: '★' },
   { to: '/board', label: '게시판', icon: '□' },
 ]
 
@@ -31,6 +41,7 @@ const routeTitleMap = {
   problems: '문제풀기',
   'problem-detail': '문제풀기',
   'problem-submissions': '제출내역',
+  ranking: '랭킹',
   board: '게시판',
   'board-write': '글쓰기',
   'board-detail': '게시글',
@@ -60,18 +71,42 @@ const toggleProfileMenu = () => {
 const handleLogout = () => {
   auth.logout()
   isProfileOpen.value = false
-  router.push('/')
+  router.replace({ name: 'login' })
 }
+
+const loadSidebarStreak = async () => {
+  if (!auth.isLoggedIn) {
+    sidebarStreak.value = null
+    return
+  }
+
+  isLoadingSidebarStreak.value = true
+  try {
+    sidebarStreak.value = await fetchMyStreak({ days: 7 })
+  } catch {
+    sidebarStreak.value = null
+  } finally {
+    isLoadingSidebarStreak.value = false
+  }
+}
+
+watch(
+  () => auth.isLoggedIn,
+  () => {
+    loadSidebarStreak()
+  },
+)
 
 onMounted(() => {
   applyUiSettings(readStoredUiSettings())
+  loadSidebarStreak()
 })
 </script>
 
 <template>
   <RouterView v-if="isAuthLayout" />
 
-  <div v-else class="app-shell">
+  <div v-else-if="auth.isLoggedIn" class="app-shell">
     <aside class="sidebar" aria-label="주요 메뉴">
       <RouterLink to="/" class="brand" aria-label="알트 홈">
         <span class="brand-mark">
@@ -83,19 +118,40 @@ onMounted(() => {
         </span>
       </RouterLink>
 
-      <section class="status-panel compact-status" aria-label="서비스 상태">
-        <p class="panel-eyebrow">■ ALT STATUS</p>
-        <div class="compact-status-grid">
-          <RouterLink to="/problems">
-            <span>QUESTS</span>
-            <strong>READY</strong>
-          </RouterLink>
-          <RouterLink to="/board">
-            <span>COMMUNITY</span>
-            <strong>LIVE</strong>
-          </RouterLink>
+      <RouterLink to="/mypage" class="status-panel mini-profile-panel" aria-label="내 정보로 이동">
+        <p class="panel-eyebrow">■ PLAYER PROFILE</p>
+        <div class="mini-profile-head">
+          <img
+            v-if="showNavProfileImage"
+            :src="auth.user.profileImageUrl"
+            :alt="`${auth.user?.nickname || '사용자'} 프로필`"
+            class="mini-profile-avatar mini-profile-image"
+            @error="navImageFailed = true"
+          />
+          <span v-else class="mini-profile-avatar">{{ avatarInitial }}</span>
+          <span class="mini-profile-id">
+            <strong>{{ auth.isLoggedIn ? auth.user?.nickname || '사용자' : '게스트' }}</strong>
+            <small>{{ auth.isLoggedIn ? auth.user?.email || '계정 정보' : '로그인 후 기록 동기화' }}</small>
+          </span>
         </div>
-      </section>
+        <div class="mini-profile-stats">
+          <span>
+            <small>STREAK</small>
+            <strong>{{ isLoadingSidebarStreak ? '...' : `${currentStreak}일` }}</strong>
+          </span>
+          <span>
+            <small>LEVEL</small>
+            <strong>Lv. {{ currentLevel }}</strong>
+          </span>
+        </div>
+        <div class="mini-xp-row">
+          <span>{{ currentXp }} XP</span>
+          <span>{{ currentLevelXp }} / {{ XP_PER_LEVEL }}</span>
+        </div>
+        <div class="mini-xp-bar" aria-hidden="true">
+          <span :style="{ width: `${xpProgressPercent}%` }" />
+        </div>
+      </RouterLink>
 
       <nav class="nav-groups">
         <p class="nav-section-title">MAIN MENU</p>
@@ -121,29 +177,6 @@ onMounted(() => {
         <RouterLink to="/settings" class="side-settings-link">
           <span class="nav-icon">⚙</span>
           <span>SETTINGS</span>
-        </RouterLink>
-
-        <RouterLink v-if="auth.isLoggedIn" to="/mypage" class="side-player-card">
-          <img
-            v-if="showNavProfileImage"
-            :src="auth.user.profileImageUrl"
-            :alt="`${auth.user?.nickname || '사용자'} 프로필`"
-            class="side-player-avatar side-player-image"
-            @error="navImageFailed = true"
-          />
-          <span v-else class="side-player-avatar">{{ avatarInitial }}</span>
-          <span>
-            <strong>{{ auth.user?.nickname || '사용자' }}</strong>
-            <p>{{ auth.user?.email || '계정 정보' }}</p>
-          </span>
-        </RouterLink>
-
-        <RouterLink v-else to="/login" class="side-player-card">
-          <span class="side-player-avatar">?</span>
-          <span>
-            <strong>게스트</strong>
-            <p>로그인 후 제출 가능</p>
-          </span>
         </RouterLink>
       </div>
     </aside>

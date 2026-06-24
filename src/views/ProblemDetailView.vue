@@ -5,6 +5,7 @@ import { fetchProblem } from '@/api/problems'
 import { createSubmission, fetchProblemSubmissions, fetchSubmission } from '@/api/submissions'
 import MonacoCodeEditor from '@/components/MonacoCodeEditor.vue'
 import { useAuthStore } from '@/stores/auth'
+import { renderMarkdown } from '@/utils/markdown'
 
 const route = useRoute()
 const router = useRouter()
@@ -37,6 +38,9 @@ const codeTemplates = {
 
 const problemId = computed(() => route.params.problemId)
 const canSubmit = computed(() => sourceCode.value.trim() && !submitting.value)
+const renderedDescription = computed(() => renderMarkdown(problem.value?.description || '-'))
+const renderedInputFormat = computed(() => renderMarkdown(problem.value?.inputFormat || '-'))
+const renderedOutputFormat = computed(() => renderMarkdown(problem.value?.outputFormat || '-'))
 
 const samples = computed(() => {
   return Array.isArray(problem.value?.samples) ? problem.value.samples : []
@@ -71,6 +75,10 @@ const sampleInput = (sample) => {
 
 const sampleOutput = (sample) => {
   return sample?.output ?? sample?.expectedOutput ?? ''
+}
+
+const sampleDescription = (sample) => {
+  return sample?.description ?? ''
 }
 
 const formatTimeLimit = (value) => {
@@ -162,18 +170,20 @@ const loadProblem = async () => {
 const loadRecentSubmissions = async () => {
   if (!auth.isLoggedIn) {
     recentSubmissions.value = []
+    latestSubmission.value = null
     return
   }
   recentLoading.value = true
   try {
-    const data = await fetchProblemSubmissions(problemId.value, { size: 5 })
+    const data = await fetchProblemSubmissions(problemId.value, { size: 5, mine: true })
     recentSubmissions.value = data.items || []
-    latestSubmission.value = recentSubmissions.value[0] || latestSubmission.value
+    latestSubmission.value = recentSubmissions.value[0] || null
     if (latestSubmission.value && isInProgress(latestSubmission.value.status)) {
       startPolling(latestSubmission.value.id)
     }
   } catch {
     recentSubmissions.value = []
+    latestSubmission.value = null
   } finally {
     recentLoading.value = false
   }
@@ -277,7 +287,7 @@ watch(
         <p>불러오는 중...</p>
       </div>
 
-      <div v-else-if="errorMessage" class="detail-state">
+      <div v-else-if="errorMessage" class="detail-state error-state">
         <p>{{ errorMessage }}</p>
         <button type="button" class="btn btn-outline" @click="loadProblem">다시 시도</button>
       </div>
@@ -303,23 +313,25 @@ watch(
 
           <section class="statement-section">
             <h2>문제 설명</h2>
-            <p class="pre-line">{{ problem.description }}</p>
+            <div class="markdown-body statement-markdown" v-html="renderedDescription"></div>
           </section>
 
           <section class="statement-section">
             <h2>입력</h2>
-            <p class="pre-line">{{ problem.inputFormat || '-' }}</p>
+            <div class="markdown-body statement-markdown" v-html="renderedInputFormat"></div>
           </section>
 
           <section class="statement-section">
             <h2>출력</h2>
-            <p class="pre-line">{{ problem.outputFormat || '-' }}</p>
+            <div class="markdown-body statement-markdown" v-html="renderedOutputFormat"></div>
           </section>
 
           <section class="statement-section">
             <h2>제약</h2>
             <ul v-if="constraints.length > 0" class="constraint-list">
-              <li v-for="constraint in constraints" :key="constraint">{{ constraint }}</li>
+              <li v-for="constraint in constraints" :key="constraint">
+                <div class="markdown-body statement-markdown" v-html="renderMarkdown(constraint)"></div>
+              </li>
             </ul>
             <p v-else class="muted">-</p>
           </section>
@@ -335,6 +347,12 @@ watch(
                 <div class="sample-block">
                   <h3>출력 {{ index + 1 }}</h3>
                   <pre>{{ sampleOutput(sample) }}</pre>
+                </div>
+                <div v-if="sampleDescription(sample)" class="sample-description">
+                  <div
+                    class="markdown-body statement-markdown"
+                    v-html="renderMarkdown(sampleDescription(sample))"
+                  ></div>
                 </div>
               </div>
             </div>
@@ -464,7 +482,7 @@ watch(
 
 .detail-container {
   padding: 0;
-  max-width: 1440px;
+  max-width: none;
 }
 
 .back-link {
@@ -481,7 +499,7 @@ watch(
 
 .solve-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(440px, 0.82fr);
+  grid-template-columns: minmax(520px, 1.08fr) minmax(520px, 0.92fr);
   gap: var(--space-6);
   align-items: start;
 }
@@ -558,9 +576,8 @@ watch(
   font-weight: 950;
 }
 
-.pre-line {
-  white-space: pre-wrap;
-  color: var(--color-text);
+.statement-markdown {
+  font-size: var(--font-base);
 }
 
 .constraint-list {
@@ -583,6 +600,13 @@ watch(
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: var(--space-4);
+}
+
+.sample-description {
+  grid-column: 1 / -1;
+  padding: var(--space-3) var(--space-4);
+  border: 2px solid var(--color-border-light);
+  background: var(--color-surface);
 }
 
 .sample-block {

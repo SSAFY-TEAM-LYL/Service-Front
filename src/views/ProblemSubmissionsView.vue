@@ -57,7 +57,13 @@ const codeTemplates = {
 
 const problemId = computed(() => route.params.problemId)
 const isEditingSubmission = computed(() => Boolean(selectedSubmission.value))
-const canSave = computed(() => sourceCode.value.trim() && !saving.value)
+const isOwnSubmission = computed(
+  () =>
+    selectedSubmission.value && Number(selectedSubmission.value.authorId) === Number(auth.user?.id),
+)
+const canEditSubmission = computed(() => !selectedSubmission.value || isOwnSubmission.value)
+const canSave = computed(() => canEditSubmission.value && sourceCode.value.trim() && !saving.value)
+const canManageReview = (review) => Number(review.authorId) === Number(auth.user?.id)
 
 const statusLabel = (status) => {
   const labels = {
@@ -359,7 +365,7 @@ watch(selectedLanguage, (language, oldLanguage) => {
 
       <div v-if="loading" class="page-state">불러오는 중...</div>
 
-      <div v-else-if="errorMessage" class="page-state">
+      <div v-else-if="errorMessage" class="page-state error-state">
         <p>{{ errorMessage }}</p>
         <button type="button" class="btn btn-outline" @click="loadInitial">다시 시도</button>
       </div>
@@ -386,12 +392,13 @@ watch(selectedLanguage, (language, oldLanguage) => {
                   {{ statusLabel(submission.status) }}
                 </span>
                 <strong>{{ submission.language }}</strong>
+                <span>{{ submission.author || '작성자' }}</span>
                 <span>{{ submission.passedTestCount }} / {{ submission.totalTestCount }}</span>
                 <span>{{ formatDate(submission.submittedAt) }}</span>
               </button>
             </li>
           </ul>
-          <p v-else class="muted">아직 제출한 코드가 없습니다.</p>
+          <p v-else class="muted">아직 제출된 코드가 없습니다.</p>
 
           <button
             v-if="hasNext"
@@ -410,7 +417,18 @@ watch(selectedLanguage, (language, oldLanguage) => {
                 <span class="section-eyebrow">{{
                   isEditingSubmission ? `#${selectedSubmission.id}` : 'NEW'
                 }}</span>
-                <h2>{{ isEditingSubmission ? '제출 코드 수정' : '새 코드 제출' }}</h2>
+                <h2>
+                  {{
+                    canEditSubmission
+                      ? isEditingSubmission
+                        ? '제출 코드 수정'
+                        : '새 코드 제출'
+                      : '제출 코드 보기'
+                  }}
+                </h2>
+                <p v-if="selectedSubmission" class="muted">
+                  {{ selectedSubmission.author || '작성자' }}
+                </p>
               </div>
               <div class="workspace-actions">
                 <button
@@ -422,7 +440,7 @@ watch(selectedLanguage, (language, oldLanguage) => {
                   결과 새로고침
                 </button>
                 <button
-                  v-if="selectedSubmission"
+                  v-if="isOwnSubmission"
                   type="button"
                   class="btn btn-outline btn-sm danger"
                   :disabled="deleting"
@@ -440,13 +458,18 @@ watch(selectedLanguage, (language, oldLanguage) => {
                 type="button"
                 class="language-tab"
                 :class="{ active: selectedLanguage === language.value }"
+                :disabled="!canEditSubmission"
                 @click="selectedLanguage = language.value"
               >
                 {{ language.label }}
               </button>
             </div>
 
-            <MonacoCodeEditor v-model="sourceCode" :language="selectedLanguage" />
+            <MonacoCodeEditor
+              v-model="sourceCode"
+              :language="selectedLanguage"
+              :read-only="!canEditSubmission"
+            />
 
             <div v-if="selectedSubmission" class="result-summary">
               <span class="status-badge" :class="statusClass(selectedSubmission.status)">
@@ -468,6 +491,7 @@ watch(selectedLanguage, (language, oldLanguage) => {
 
             <div class="save-row">
               <button
+                v-if="canEditSubmission"
                 type="button"
                 class="btn btn-primary btn-lg"
                 :disabled="!canSave"
@@ -539,7 +563,7 @@ watch(selectedLanguage, (language, oldLanguage) => {
 
                   <template v-else>
                     <p>{{ review.content }}</p>
-                    <div class="review-actions">
+                    <div v-if="canManageReview(review)" class="review-actions">
                       <button
                         type="button"
                         class="btn btn-ghost btn-sm"
@@ -583,7 +607,7 @@ watch(selectedLanguage, (language, oldLanguage) => {
 }
 
 .submissions-container {
-  max-width: 1440px;
+  max-width: none;
   padding: 0;
 }
 

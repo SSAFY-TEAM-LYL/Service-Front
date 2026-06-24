@@ -123,7 +123,7 @@ watch(
       <p>불러오는 중...</p>
     </div>
 
-    <div v-else-if="errorMessage" class="board-state">
+    <div v-else-if="errorMessage" class="board-state error-state">
       <p>{{ errorMessage }}</p>
     </div>
 
@@ -199,7 +199,7 @@ watch(
 <style scoped>
 .board-page {
   padding: 0;
-  max-width: 1180px;
+  max-width: none;
 }
 
 .board-top {

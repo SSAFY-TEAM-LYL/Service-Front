@@ -43,7 +43,6 @@ onMounted(() => {
       <div>
         <p class="settings-eyebrow">■ SETTINGS TERMINAL</p>
         <h2>화면 설정</h2>
-        <span>LOCAL STORAGE · {{ saveStatus }}</span>
       </div>
 
       <button type="button" class="btn btn-outline" @click="resetSettings">기본값</button>
