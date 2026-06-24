@@ -1,6 +1,8 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 
+const authRouteNames = ['login', 'signup', 'account-restore', 'oauth-callback']
+
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   scrollBehavior() {
@@ -95,18 +97,17 @@ const router = createRouter({
 
 router.beforeEach(async (to) => {
   const auth = useAuthStore()
+  const isAuthRoute = authRouteNames.includes(to.name)
+
+  if (isAuthRoute) return true
 
   if (auth.isLoggedIn && !auth.user) {
     try {
       await auth.restoreUser()
     } catch {
-      if (to.meta.requiresAuth || to.meta.requiresAdmin) {
-        return { name: 'login', query: { redirect: to.fullPath } }
-      }
+      return { name: 'login', query: { redirect: to.fullPath } }
     }
   }
-
-  if (!to.meta.requiresAuth && !to.meta.requiresAdmin) return true
 
   if (!auth.isLoggedIn) {
     return { name: 'login', query: { redirect: to.fullPath } }

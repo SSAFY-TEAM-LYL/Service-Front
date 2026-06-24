@@ -20,6 +20,7 @@ export const useAuthStore = defineStore('auth', () => {
   function clearAuth() {
     accessToken.value = null
     user.value = null
+    restorePromise = null
     localStorage.removeItem('accessToken')
   }
 
@@ -55,12 +56,15 @@ export const useAuthStore = defineStore('auth', () => {
     }
     if (restorePromise) return restorePromise
 
+    const restoringToken = accessToken.value
     isRestoring.value = true
     restorePromise = api
       .get('/auth/me', { skipAuthRedirect: true })
       .then((response) => {
         const data = unwrapApiResponse(response)
-        user.value = data
+        if (accessToken.value === restoringToken) {
+          user.value = data
+        }
         return data
       })
       .catch((error) => {

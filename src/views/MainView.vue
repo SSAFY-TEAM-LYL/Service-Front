@@ -8,7 +8,7 @@ import { useAuthStore } from '@/stores/auth'
 const auth = useAuthStore()
 const XP_PER_LEVEL = 50
 
-const heroName = computed(() => auth.user?.nickname || 'Alt Learner')
+const heroName = computed(() => auth.user?.nickname || '사용자')
 const isAdmin = computed(() => auth.user?.role === 'ADMIN')
 const streak = ref(null)
 const isLoadingStreak = ref(false)
@@ -52,10 +52,10 @@ const overviewCards = computed(() => {
     },
     {
       label: 'PROFILE',
-      value: auth.isLoggedIn ? '내 정보' : '로그인',
-      note: auth.isLoggedIn ? '회원정보 관리' : '제출 기능 활성화',
+      value: '내 정보',
+      note: '회원정보 관리',
       tone: 'gold',
-      to: auth.isLoggedIn ? '/mypage' : '/login',
+      to: '/mypage',
       icon: '◆',
     },
   ]

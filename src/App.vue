@@ -23,7 +23,6 @@ const isAdmin = computed(() => auth.user?.role === 'ADMIN')
 const showNavProfileImage = computed(() => auth.user?.profileImageUrl && !navImageFailed.value)
 const avatarInitial = computed(() => (auth.user?.nickname || 'U').slice(0, 1).toUpperCase())
 const pageTitle = computed(() => route.meta?.title || routeTitleMap[route.name] || '대시보드')
-const profilePanelLink = computed(() => (auth.isLoggedIn ? '/mypage' : '/login'))
 const currentXp = computed(() => Number(auth.user?.xp) || 0)
 const currentLevel = computed(() => Number(auth.user?.level) || Math.floor(currentXp.value / XP_PER_LEVEL) + 1)
 const currentLevelXp = computed(() => currentXp.value % XP_PER_LEVEL)
@@ -72,7 +71,7 @@ const toggleProfileMenu = () => {
 const handleLogout = () => {
   auth.logout()
   isProfileOpen.value = false
-  router.push('/')
+  router.replace({ name: 'login' })
 }
 
 const loadSidebarStreak = async () => {
@@ -107,7 +106,7 @@ onMounted(() => {
 <template>
   <RouterView v-if="isAuthLayout" />
 
-  <div v-else class="app-shell">
+  <div v-else-if="auth.isLoggedIn" class="app-shell">
     <aside class="sidebar" aria-label="주요 메뉴">
       <RouterLink to="/" class="brand" aria-label="알트 홈">
         <span class="brand-mark">
@@ -119,7 +118,7 @@ onMounted(() => {
         </span>
       </RouterLink>
 
-      <RouterLink :to="profilePanelLink" class="status-panel mini-profile-panel" aria-label="내 정보로 이동">
+      <RouterLink to="/mypage" class="status-panel mini-profile-panel" aria-label="내 정보로 이동">
         <p class="panel-eyebrow">■ PLAYER PROFILE</p>
         <div class="mini-profile-head">
           <img
