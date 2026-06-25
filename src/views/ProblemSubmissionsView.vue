@@ -110,6 +110,9 @@ const formatUsage = (submission) => {
 }
 
 const getErrorMessage = (error, fallback) => {
+  if (error.code === 'ECONNABORTED') {
+    return '요청 시간이 초과되었습니다. 잠시 후 다시 시도해주세요.'
+  }
   if (error.response?.status === 401) {
     return '로그인 후 이용할 수 있습니다.'
   }

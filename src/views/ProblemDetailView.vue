@@ -23,6 +23,10 @@ const latestSubmission = ref(null)
 const recentSubmissions = ref([])
 const recentLoading = ref(false)
 let pollingTimer = null
+let pollingAttemptCount = 0
+
+const POLLING_INTERVAL_MS = 1500
+const MAX_POLLING_ATTEMPTS = 90
 
 const languageOptions = [
   { value: 'PYTHON3', label: 'Python 3' },
@@ -143,6 +147,9 @@ const getProblemErrorMessage = (error) => {
 }
 
 const getSubmissionErrorMessage = (error) => {
+  if (error.code === 'ECONNABORTED') {
+    return '요청 시간이 초과되었습니다. 잠시 후 다시 시도해주세요.'
+  }
   if (error.response?.status === 401) {
     return '로그인 후 제출할 수 있습니다.'
   }
@@ -228,7 +235,14 @@ const submitCode = async () => {
 
 const startPolling = (submissionId) => {
   stopPolling()
+  pollingAttemptCount = 0
   pollingTimer = window.setInterval(async () => {
+    pollingAttemptCount += 1
+    if (pollingAttemptCount > MAX_POLLING_ATTEMPTS) {
+      submissionError.value = '채점 결과 확인 시간이 초과되었습니다. 잠시 후 새로고침해주세요.'
+      stopPolling()
+      return
+    }
     try {
       const submission = await fetchSubmission(submissionId)
       latestSubmission.value = submission
@@ -243,7 +257,7 @@ const startPolling = (submissionId) => {
       submissionError.value = getSubmissionErrorMessage(error)
       stopPolling()
     }
-  }, 1500)
+  }, POLLING_INTERVAL_MS)
 }
 
 const stopPolling = () => {
@@ -251,6 +265,7 @@ const stopPolling = () => {
     window.clearInterval(pollingTimer)
     pollingTimer = null
   }
+  pollingAttemptCount = 0
 }
 
 onMounted(async () => {
