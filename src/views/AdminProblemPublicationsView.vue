@@ -283,7 +283,7 @@ onMounted(loadProblems)
 
 .col-id {
   color: var(--color-text-secondary);
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-family: var(--font-code);
 }
 
 .col-title {

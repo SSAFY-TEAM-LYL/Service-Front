@@ -51,7 +51,7 @@ onMounted(() => {
     automaticLayout: true,
     minimap: { enabled: false },
     fontSize: 14,
-    fontFamily: "'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace",
+    fontFamily: "'Cascadia Code', 'Cascadia Mono', 'SFMono-Regular', Menlo, Monaco, Consolas, 'Liberation Mono', monospace",
     lineHeight: 22,
     padding: { top: 14, bottom: 14 },
     scrollBeyondLastLine: false,
