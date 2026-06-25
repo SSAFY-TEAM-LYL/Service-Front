@@ -28,7 +28,8 @@ const solvedStatsError = ref('')
 const recentProblems = ref([])
 const popularPosts = ref([])
 const isLoadingDashboardLists = ref(false)
-const dashboardListsError = ref('')
+const recentProblemsError = ref('')
+const popularPostsError = ref('')
 
 const currentXp = computed(() => Number(auth.user?.xp) || 0)
 const currentLevel = computed(() => Number(auth.user?.level) || Math.floor(currentXp.value / XP_PER_LEVEL) + 1)
@@ -116,18 +117,24 @@ const loadSolvedStats = async () => {
 
 const loadDashboardLists = async () => {
   isLoadingDashboardLists.value = true
-  dashboardListsError.value = ''
+  recentProblemsError.value = ''
+  popularPostsError.value = ''
   try {
-    const [problemData, boardData] = await Promise.all([
-      fetchProblems({ size: 3 }),
-      fetchBoardPosts({ size: 20 }),
-    ])
+    const problemData = await fetchProblems({ size: 3 })
     recentProblems.value = problemData.items || []
+  } catch (error) {
+    recentProblems.value = []
+    recentProblemsError.value = error.response?.data?.message || '최근 등록 문제를 불러오지 못했습니다.'
+  }
+
+  try {
+    const boardData = await fetchBoardPosts({ size: 20 })
     popularPosts.value = [...(boardData.items || [])]
       .sort((a, b) => Number(b.views) - Number(a.views) || b.id - a.id)
       .slice(0, 3)
   } catch (error) {
-    dashboardListsError.value = error.response?.data?.message || '대시보드 목록을 불러오지 못했습니다.'
+    popularPosts.value = []
+    popularPostsError.value = error.response?.data?.message || '조회수 높은 게시글을 불러오지 못했습니다.'
   } finally {
     isLoadingDashboardLists.value = false
   }
@@ -264,7 +271,7 @@ onMounted(() => {
     <section class="dashboard-columns">
       <article class="dashboard-card">
         <header>▸ 최근 등록 문제 TOP 3</header>
-        <p v-if="dashboardListsError" class="dashboard-list-state error-text">{{ dashboardListsError }}</p>
+        <p v-if="recentProblemsError" class="dashboard-list-state error-text">{{ recentProblemsError }}</p>
         <p v-else-if="isLoadingDashboardLists" class="dashboard-list-state">문제를 불러오는 중입니다.</p>
         <ol v-else-if="recentProblems.length > 0" class="dashboard-link-list">
           <li v-for="problem in recentProblems" :key="problem.id">
@@ -279,7 +286,7 @@ onMounted(() => {
 
       <article class="dashboard-card">
         <header>▸ 조회수 높은 게시글 TOP 3</header>
-        <p v-if="dashboardListsError" class="dashboard-list-state error-text">{{ dashboardListsError }}</p>
+        <p v-if="popularPostsError" class="dashboard-list-state error-text">{{ popularPostsError }}</p>
         <p v-else-if="isLoadingDashboardLists" class="dashboard-list-state">게시글을 불러오는 중입니다.</p>
         <ol v-else-if="popularPosts.length > 0" class="dashboard-link-list">
           <li v-for="post in popularPosts" :key="post.id">
